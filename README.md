@@ -6,6 +6,12 @@ This template deploys a simple HTTP API with backend logic running on Python + A
 
 ## Usage
 
+### Configuration
+
+Configuration is provided in the `.env` file. 
+
+> Rename the existing `.env.sample` file to `.env` to use the configuration file.
+
 ### Deployment
 
 ```
@@ -36,6 +42,15 @@ curl https://xxxxxxx.execute-api.us-east-1.amazonaws.com/
 
 Which should result in response similar to the following (removed `input` content for brevity):
 
-```
-Success
+```json
+{
+    "API": {
+        "statusCode": 200,
+        "body": "OK"
+    },
+    "SlackAPI": {
+        "statusCode": 200,
+        "body": "ok"
+    }
+}
 ```
