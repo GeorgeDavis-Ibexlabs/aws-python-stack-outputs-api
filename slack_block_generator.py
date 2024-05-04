@@ -1,7 +1,6 @@
 import urllib3
 import json
 import logging
-import os
 
 class SlackBlockGenerator:
     def __init__(self, webhook_url: str, channel: str, username: str, icon_url: str, logger: logging.Logger):
@@ -101,7 +100,7 @@ class SlackBlockGenerator:
 
                 slack_blocks.append(
                     self.__new_header(
-                        header_text = "AWS Account ID - " + value
+                        header_text = "AWS Account ID - " + str(value)
                     )
                 )
 
@@ -117,19 +116,19 @@ class SlackBlockGenerator:
                 )
 
                 text_section_list.append(
-                        self.__new_text_section(
-                            text_section_dict = self.__new_markdown_text_field(
-                                markdown_text = "*" + (key.split(':')[5]).split('/')[1] + "*"
-                            )
+                    self.__new_text_section(
+                        text_section_dict = self.__new_markdown_text_field(
+                            markdown_text = "*" + (key.split(':')[5]).split('/')[1] + "*"
                         )
                     )
+                )
                 
                 temp_elements_list = []
 
                 for dict_key, dict_value in value.items():
                     
                     temp_elements_list.append(self.__new_markdown_text_field(
-                        markdown_text = dict_key + " - `" + dict_value + "`"
+                        markdown_text = str(dict_key) + " - `" + str(dict_value) + "`"
                     ))
                     
                 text_section_list.append(
@@ -148,7 +147,7 @@ class SlackBlockGenerator:
                     text_section_list.append(
                         self.__new_text_section(
                             text_section_dict = self.__new_markdown_text_field(
-                                markdown_text = "*" + key + "* - `" + value + "`"
+                                markdown_text = "*" + str(key) + "* - `" + str(value) + "`"
                             )
                         )
                     )
