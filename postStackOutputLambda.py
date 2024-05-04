@@ -1,5 +1,5 @@
 import logging
-import os
+from os import environ
 import base64
 import json
 from http.client import responses
@@ -7,7 +7,7 @@ from http.client import responses
 from slack_block_generator import SlackBlockGenerator
 
 logger = logging.getLogger(__name__)
-logger.setLevel(os.environ['LOG_LEVEL'] if 'LOG_LEVEL' in os.environ.keys() else 'INFO')
+logger.setLevel(environ.get('LOG_LEVEL') if 'LOG_LEVEL' in environ.keys() else 'INFO')
 
 def lambda_handler(event, context):
 
@@ -31,13 +31,13 @@ def lambda_handler(event, context):
             }
         })
 
-        if bool(os.environ["ENABLE_SLACK_INTEGRATION"]):
+        if bool(environ.get("ENABLE_SLACK_INTEGRATION")):
 
             # Access environment variables
-            slack_webhook_url = os.environ.get('SLACK_WEBHOOK_URL')
-            slack_channel = os.environ.get('SLACK_CHANNEL')
-            slack_username = os.environ.get('SLACK_USERNAME')
-            slack_icon_url = os.environ.get('SLACK_ICON_URL')
+            slack_webhook_url = environ.get('SLACK_WEBHOOK_URL')
+            slack_channel = environ.get('SLACK_CHANNEL')
+            slack_username = environ.get('SLACK_USERNAME')
+            slack_icon_url = environ.get('SLACK_ICON_URL')
 
             slack = SlackBlockGenerator(
                 webhook_url = slack_webhook_url,
