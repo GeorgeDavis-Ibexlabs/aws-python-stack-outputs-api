@@ -1,0 +1,252 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: This CloudFormation stack deploys a simple HTTP API with backend logic running on Python + AWS Lambda and API Gateway. It captures the HTTP request body and push a Slack notification and/or JIRA ticket to pre-configured  endpoints.
+
+Parameters:
+  GitHubBranch:
+    Description: 'GitHub Branch. Example: main, dev.'
+    Type: String
+    Default: main
+
+  S3Key:
+    Description: S3 Bucket Name.
+    Default: 'lambda-aws-python-stack-outputs-api.zip'
+    Type: String
+
+Resources:
+  # This section contains the list of SSM Parameters
+  #  
+  # SSMParameterEnableSlackIntegration:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: Enable Slack integration
+  #     Name: ENABLE_SLACK_INTEGRATION
+  #     Type: String
+  #     Value: <>
+
+  # SSMParameterSlackWebhookUrl:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: This is the Slack Webhook URL
+  #     Name: SLACK_WEBHOOK_URL
+  #     Type: String
+  #     Value: <SLACK-WEBHOOK-URL-GOES-HERE>
+
+  # SSMParameterSlackChannelName:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: This is the Slack Channel Name to publish to
+  #     Name: SLACK_CHANNEL
+  #     Type: String
+  #     Value: <SLACK-CHANNEL-NAME-GOES-HERE>
+
+  # SSMParameterSlackUsername:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: This is the Slack Username to use
+  #     Name: SLACK_USERNAME
+  #     Type: String
+  #     Value: <SLACK-USERNAME-GOES-HERE>
+
+  # SSMParameterSlackIconUrl:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: This is the URL of the Slack Display Icon to use when pushing Slack messages
+  #     Name: SLACK_ICON_URL
+  #     Type: String
+  #     Value: <SLACK-ICON-URL-GOES-HERE>
+
+  # SSMParameterJiraCloudUrl:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: JIRA Cloud URL
+  #     Name: JIRA_CLOUD_URL
+  #     Type: String
+  #     Value: <JIRA-CLOUD-URL-GOES-HERE>
+
+  # SSMParameterJiraProjectKey:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: JIRA Project key
+  #     Name: JIRA_PROJECT_KEY
+  #     Type: String
+  #     Value: <JIRA-PROJECT-ID-GOES-HERE>
+
+  # SSMParameterJiraAuthEmail:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: JIRA Authentication Email
+  #     Name: JIRA_AUTH_EMAIL
+  #     Type: String
+  #     Value: <JIRA-AUTH-EMAIL-GOES-HERE>
+
+  # SSMParameterJiraApiToken:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: JIRA API token
+  #     Name: JIRA_API_TOKEN
+  #     Type: String
+  #     Value: <JIRA-AUTH-TOKEN-GOES-HERE>
+
+  # SSMParameterJiraEnabled:
+  #   Type: AWS::SSM::Parameter
+  #   Properties:
+  #     DataType: text
+  #     Description: JIRA Enabled flag
+  #     Name: JIRA_ENABLED
+  #     Type: String
+  #     Value: true
+
+  PostStackOutputLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:CreateLogGroup
+                  - logs:TagResource
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*'
+              - Effect: Allow
+                Action:
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*:*'
+
+  PostStackOutputLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.10
+      MemorySize: 128
+      Timeout: 25
+      Role: !GetAtt PostStackOutputLambdaRole.Arn
+      Handler: postStackOutputLambda.lambda_handler
+      Code:
+        S3Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        S3Key: !Sub 'wafr-ftr-onboarding/${GitHubBranch}/${S3Key}'
+      Environment:
+        Variables:
+          GITHUB_BRANCH: !Ref GitHubBranch
+          ENABLE_SLACK_INTEGRATION: '{{ resolve:ssm:ENABLE_SLACK_INTEGRATION }}'
+          SLACK_WEBHOOK_URL: '{{ resolve:ssm:SLACK_WEBHOOK_URL }}'
+          SLACK_CHANNEL: '{{ resolve:ssm:SLACK_CHANNEL }}'
+          SLACK_USERNAME: '{{ resolve:ssm:SLACK_USERNAME }}'
+          SLACK_ICON_URL: '{{ resolve:ssm:SLACK_ICON_URL }}'
+          JIRA_CLOUD_URL: '{{ resolve:ssm:JIRA_CLOUD_URL }}'
+          JIRA_PROJECT_KEY: '{{ resolve:ssm:JIRA_PROJECT_KEY }}'
+          JIRA_AUTH_EMAIL: '{{ resolve:ssm:JIRA_AUTH_EMAIL }}'
+          JIRA_API_TOKEN: '{{ resolve:ssm:JIRA_API_TOKEN }}'
+          JIRA_ENABLED: '{{ resolve:ssm:JIRA_ENABLED }}'
+          LOG_LEVEL: DEBUG
+
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub 'aws-python-stack-outputs-api-${GitHubBranch}'
+      ProtocolType: HTTP
+
+  HttpApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/http-api/aws-python-stack-outputs-api-${GitHubBranch}'
+
+  HttpApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: false
+      AccessLogSettings:
+        DestinationArn: !GetAtt HttpApiLogGroup.Arn
+        Format: '{"requestTime":"$context.requestTime","requestId":"$context.requestId","apiId":"$context.apiId","resourcePath":"$context.routeKey","path":"$context.path","httpMethod":"$context.httpMethod","stage":"$context.stage","status":"$context.status","integrationStatus":"$context.integrationStatus","integrationLatency":"$context.integrationLatency","responseLatency":"$context.responseLatency","responseLength":"$context.responseLength","errorMessage":"$context.error.message","format":"SLS_HTTP_API_LOG","version":"1.0.0"}'
+
+  PostStackOutputLambdaHttpApiLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt PostStackOutputLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+
+  PostStackOutputLambdaHttpApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt PostStackOutputLambdaFunction.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+
+  HttpApiRoutePostSend:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /send
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref PostStackOutputLambdaHttpApiIntegration
+
+Outputs:
+  HttpApiId:
+    Description: Id of the HTTP API
+    Value: !Ref HttpApi
+
+  HttpApiUrl:
+    Description: URL of the HTTP API
+    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+
+Mappings:
+  RegionMap:
+    us-east-1:
+      S3BucketName: us-east-1.wafr.ibexlabs.com
+    us-east-2:
+      S3BucketName: us-east-2.wafr.ibexlabs.com
+    us-west-1:
+      S3BucketName: us-west-1.wafr.ibexlabs.com
+    us-west-2:
+      S3BucketName: wafr.ibexlabs.com
+    ca-central-1:
+      S3BucketName: ca-central-1.wafr.ibexlabs.com
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Lambda Code Zip file configuration.
+        Parameters:
+          - GitHubBranch
+          - S3Key
+
+    ParameterLabels:
+      GitHubBranch:
+        default: "Please provide the GitHub branch to use. Recommended to leave this as `main`."
+
+      S3Key:
+        default: "Please provide the file name of the Lambda code zip file."
