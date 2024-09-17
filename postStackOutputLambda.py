@@ -4,7 +4,7 @@ import base64
 import json
 from http.client import responses
 
-from slack_block_generator import SlackBlockGenerator
+from slack_block_generator.slack_block_generator import SlackBlockGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(environ.get('LOG_LEVEL') if 'LOG_LEVEL' in environ.keys() else 'INFO')
