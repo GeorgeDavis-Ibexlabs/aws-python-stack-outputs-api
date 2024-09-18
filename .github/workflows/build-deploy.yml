@@ -114,8 +114,13 @@ jobs:
           SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
           DST_REGION: us-east-1
           DST_BUCKET: us-east-1.${{ vars.BUCKET_BASE_URL }}
+          LOG_FILENAME: debug.log
           LOGLEVEL: DEBUG
           BOTOCORE_LOGLEVEL: DEBUG
+
+      - name: Debug Docker Logs
+        run: |
+          cat debug.log
 
     #   # Copy to us-east-2
     #   - name: Copy files across S3 buckets, primarily AWS Lambda zip files
