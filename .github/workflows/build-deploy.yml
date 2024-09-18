@@ -5,7 +5,7 @@ name: build-deploy-ci
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: ["main", "dev", "debug-ci-logs"]
+    branches: ["main", "dev"]
   pull_request:
     branches: ["main", "dev"]
 
@@ -39,12 +39,12 @@ jobs:
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v44.5.7
-        # with:
-        #   files_ignore: |
-        #     .github/**
-        #     .git*
-        #     LICENSE
-        #     **.md
+        with:
+          files_ignore: |
+            .github/**
+            .git*
+            LICENSE
+            **.md
 
       - name: List all changed files
         env:
@@ -63,7 +63,7 @@ jobs:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
     needs: [build]
-    if: ${{ (needs.build.outputs.requires-deploy == 'true') && (contains('refs/heads/main, refs/heads/dev, refs/heads/debug-ci-logs', github.ref)) }}
+    if: ${{ (needs.build.outputs.requires-deploy == 'true') && (contains('refs/heads/main, refs/heads/dev', github.ref)) }}
     env:
       LAMBDA_ZIP_NAME: lambda-${{ needs.build.outputs.repo-name }}.zip
 
@@ -114,44 +114,38 @@ jobs:
           SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
           DST_REGION: us-east-1
           DST_BUCKET: us-east-1.${{ vars.BUCKET_BASE_URL }}
-          LOG_FILENAME: /github/workspace/debug.log
           LOGLEVEL: DEBUG
           BOTOCORE_LOGLEVEL: DEBUG
 
-      - name: Debug Docker Logs
-        run: |
-          ls  -artl ${{ github.workspace }}
-          cat ${{ github.workspace }}/debug.log
+      # Copy to us-east-2
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ steps.extract_branch.outputs.branch }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-east-2
+          DST_BUCKET: us-east-2.${{ vars.BUCKET_BASE_URL }}
 
-    #   # Copy to us-east-2
-    #   - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-    #     uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.4
-    #     with:
-    #       SRC_REGION: ${{ vars.AWS_REGION }}
-    #       SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
-    #       SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ steps.extract_branch.outputs.branch }}/
-    #       SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
-    #       DST_REGION: us-east-2
-    #       DST_BUCKET: us-east-2.${{ vars.BUCKET_BASE_URL }}
+      # Copy to us-west-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ steps.extract_branch.outputs.branch }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-west-1
+          DST_BUCKET: us-west-1.${{ vars.BUCKET_BASE_URL }}
 
-    #   # Copy to us-west-1
-    #   - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-    #     uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.4
-    #     with:
-    #       SRC_REGION: ${{ vars.AWS_REGION }}
-    #       SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
-    #       SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ steps.extract_branch.outputs.branch }}/
-    #       SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
-    #       DST_REGION: us-west-1
-    #       DST_BUCKET: us-west-1.${{ vars.BUCKET_BASE_URL }}
-
-    #   # Copy to ca-central-1
-    #   - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-    #     uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.4
-    #     with:
-    #       SRC_REGION: ${{ vars.AWS_REGION }}
-    #       SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
-    #       SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ steps.extract_branch.outputs.branch }}/
-    #       SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
-    #       DST_REGION: ca-central-1
-    #       DST_BUCKET: ca-central-1.${{ vars.BUCKET_BASE_URL }}
+      # Copy to ca-central-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ steps.extract_branch.outputs.branch }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: ca-central-1
+          DST_BUCKET: ca-central-1.${{ vars.BUCKET_BASE_URL }}
