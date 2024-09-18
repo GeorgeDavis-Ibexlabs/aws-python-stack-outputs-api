@@ -4,10 +4,19 @@ import base64
 import json
 from http.client import responses
 
+from config_handler.config_handler import ConfigHandler
+from jira_handler.jira_handler import JiraHandler
 from slack_block_generator.slack_block_generator import SlackBlockGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(environ.get('LOG_LEVEL') if 'LOG_LEVEL' in environ.keys() else 'INFO')
+
+config_handler = ConfigHandler(logger=logger)
+config = config_handler.get_combined_config()
+logger.debug("Final combined config - " + str(config))
+
+if bool(environ.get("JIRA_ENABLED")):
+    jira = JiraHandler(logger=logger, config=config)
 
 def lambda_handler(event, context):
 
@@ -54,6 +63,20 @@ def lambda_handler(event, context):
                 "SlackAPI": { 
                     "statusCode": slack_http_status[0],
                     "body": slack_http_status[1]
+                }
+            })
+
+        if bool(environ.get("JIRA_ENABLED")):
+
+            issue = jira.jira_create_issue(
+                issue_summary=str(body["AWSAccountId"]) + " - " + str(body["EmailDomain"]),
+                issue_desc=str(body)
+            )
+
+            response.update({ 
+                "JiraAPI": { 
+                    "statusCode": str(issue),
+                    "body": str(issue)
                 }
             })
 
