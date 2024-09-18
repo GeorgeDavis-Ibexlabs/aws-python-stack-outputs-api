@@ -120,8 +120,8 @@ jobs:
 
       - name: Debug Docker Logs
         run: |
-          ls  -artl .
-          cat debug.log
+          ls  -artl ${{ github.workspace }}
+          cat ${{ github.workspace }}/debug.log
 
     #   # Copy to us-east-2
     #   - name: Copy files across S3 buckets, primarily AWS Lambda zip files
