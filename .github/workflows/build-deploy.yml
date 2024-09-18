@@ -120,6 +120,7 @@ jobs:
 
       - name: Debug Docker Logs
         run: |
+          ls  -artl .
           cat debug.log
 
     #   # Copy to us-east-2
