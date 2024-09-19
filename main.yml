@@ -149,16 +149,16 @@ Resources:
       Environment:
         Variables:
           GITHUB_BRANCH: !Ref GitHubBranch
-          ENABLE_SLACK_INTEGRATION: '{{ resolve:ssm:ENABLE_SLACK_INTEGRATION }}'
-          SLACK_WEBHOOK_URL: '{{ resolve:ssm:SLACK_WEBHOOK_URL }}'
-          SLACK_CHANNEL: '{{ resolve:ssm:SLACK_CHANNEL }}'
-          SLACK_USERNAME: '{{ resolve:ssm:SLACK_USERNAME }}'
-          SLACK_ICON_URL: '{{ resolve:ssm:SLACK_ICON_URL }}'
-          JIRA_CLOUD_URL: '{{ resolve:ssm:JIRA_CLOUD_URL }}'
-          JIRA_PROJECT_KEY: '{{ resolve:ssm:JIRA_PROJECT_KEY }}'
-          JIRA_AUTH_EMAIL: '{{ resolve:ssm:JIRA_AUTH_EMAIL }}'
-          JIRA_API_TOKEN: '{{ resolve:ssm:JIRA_API_TOKEN }}'
-          JIRA_ENABLED: '{{ resolve:ssm:JIRA_ENABLED }}'
+          ENABLE_SLACK_INTEGRATION: '{{resolve:ssm:ENABLE_SLACK_INTEGRATION}}'
+          SLACK_WEBHOOK_URL: '{{resolve:ssm:SLACK_WEBHOOK_URL}}'
+          SLACK_CHANNEL: '{{resolve:ssm:SLACK_CHANNEL}}'
+          SLACK_USERNAME: '{{resolve:ssm:SLACK_USERNAME}}'
+          SLACK_ICON_URL: '{{resolve:ssm:SLACK_ICON_URL}}'
+          JIRA_CLOUD_URL: '{{resolve:ssm:JIRA_CLOUD_URL}}'
+          JIRA_PROJECT_KEY: '{{resolve:ssm:JIRA_PROJECT_KEY}}'
+          JIRA_AUTH_EMAIL: '{{resolve:ssm:JIRA_AUTH_EMAIL}}'
+          JIRA_API_TOKEN: '{{resolve:ssm:JIRA_API_TOKEN}}'
+          JIRA_ENABLED: '{{resolve:ssm:JIRA_ENABLED}}'
           LOG_LEVEL: DEBUG
 
   HttpApi:
