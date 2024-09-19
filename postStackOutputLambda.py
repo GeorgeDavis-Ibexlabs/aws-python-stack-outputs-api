@@ -4,10 +4,19 @@ import base64
 import json
 from http.client import responses
 
+from config_handler.config_handler import ConfigHandler
+from jira_handler.jira_handler import JiraHandler
 from slack_block_generator.slack_block_generator import SlackBlockGenerator
 
 logger = logging.getLogger(__name__)
 logger.setLevel(environ.get('LOG_LEVEL') if 'LOG_LEVEL' in environ.keys() else 'INFO')
+
+config_handler = ConfigHandler(logger=logger)
+config = config_handler.get_combined_config()
+logger.debug("Final combined config - " + str(config))
+
+if bool(environ.get("JIRA_ENABLED")):
+    jira = JiraHandler(logger=logger, config=config)
 
 def lambda_handler(event, context):
 
@@ -20,8 +29,9 @@ def lambda_handler(event, context):
         if event['isBase64Encoded']:
             body = base64.b64decode(body)
 
+        http_body = json.loads(body)
         logger.debug("HTTP Status Code - 200")
-        logger.info("HTTP Response Body - " + str(body))
+        logger.info("HTTP Response Body - " + str(http_body))
 
         response = {}
         response.update({ 
@@ -48,7 +58,7 @@ def lambda_handler(event, context):
             )
 
             logger.debug("Slack Integration is Enabled. Posting to Slack...")
-            slack_http_status = slack.post_slack_message(http_body=json.loads(body))
+            slack_http_status = slack.post_slack_message(http_body=http_body)
 
             response.update({ 
                 "SlackAPI": { 
@@ -57,7 +67,25 @@ def lambda_handler(event, context):
                 }
             })
 
+        if bool(environ.get("JIRA_ENABLED")):
+
+            logger.debug("JSON Body - " + str(http_body))
+
+            issue = jira.jira_create_issue(
+                issue_summary="AWS Account - " + str(http_body["AWSAccountId"]),
+                issue_desc=str(http_body)
+            )
+
+            create_issue_status = 200 if "-" in str(issue) else 400
+
+            response.update({ 
+                "JiraAPI": { 
+                    "statusCode": create_issue_status,
+                    "body": responses[create_issue_status]
+                }
+            })
+
         return response
     
-    logger.error("HTTP Error - 500. Message: Invalid HTTP Body.")
+    logger.exception("HTTP Error - 500. Message: Invalid HTTP Body.")
     return { "statusCode": 500, "body": "Error" }
