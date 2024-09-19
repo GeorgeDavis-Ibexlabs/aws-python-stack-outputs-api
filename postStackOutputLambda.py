@@ -69,13 +69,13 @@ def lambda_handler(event, context):
         if bool(environ.get("JIRA_ENABLED")):
 
             issue = jira.jira_create_issue(
-                issue_summary=str(body["AWSAccountId"]) + " - " + str(body["EmailDomain"]),
-                issue_desc=str(body)
+                issue_summary=str(json.loads(body)["AWSAccountId"]) + " - " + str(json.loads(body)["EmailDomain"]),
+                issue_desc=str(json.loads(body))
             )
 
             response.update({ 
                 "JiraAPI": { 
-                    "statusCode": str(issue),
+                    "statusCode": 200,
                     "body": str(issue)
                 }
             })
