@@ -27,7 +27,7 @@ class Issues:
 
         # Search for issues in this project where the given summary matches exactly and the status is not Done to avoid older issues being updated with newer findings. Newer findings require newer tickets in that case.
         issues = self.jira.search_issues(
-            'project = ' + self.project_key + ' AND status = "To Do" AND summary ~ "\\"' + issue_summary + '\\""'
+            'project = ' + self.project_key + ' AND summary ~ "\\"' + issue_summary + '\\""'
         )
 
         self.logger.debug("Search Issue results - " + str(issues))
