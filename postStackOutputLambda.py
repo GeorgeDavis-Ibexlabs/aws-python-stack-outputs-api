@@ -68,8 +68,10 @@ def lambda_handler(event, context):
 
         if bool(environ.get("JIRA_ENABLED")):
 
+            logger.debug("JSON Body - " + str(json.loads(body)))
+
             issue = jira.jira_create_issue(
-                issue_summary=str(json.loads(body)["AWSAccountId"]) + " - " + str(json.loads(body)["EmailDomain"]),
+                issue_summary=str(json.loads(body)["AWSAccountId"]),
                 issue_desc=str(json.loads(body))
             )
 
