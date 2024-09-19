@@ -29,8 +29,9 @@ def lambda_handler(event, context):
         if event['isBase64Encoded']:
             body = base64.b64decode(body)
 
+        http_body = json.loads(body)
         logger.debug("HTTP Status Code - 200")
-        logger.info("HTTP Response Body - " + str(body))
+        logger.info("HTTP Response Body - " + str(http_body))
 
         response = {}
         response.update({ 
@@ -57,7 +58,7 @@ def lambda_handler(event, context):
             )
 
             logger.debug("Slack Integration is Enabled. Posting to Slack...")
-            slack_http_status = slack.post_slack_message(http_body=json.loads(body))
+            slack_http_status = slack.post_slack_message(http_body=http_body)
 
             response.update({ 
                 "SlackAPI": { 
@@ -68,21 +69,23 @@ def lambda_handler(event, context):
 
         if bool(environ.get("JIRA_ENABLED")):
 
-            logger.debug("JSON Body - " + str(json.loads(body)))
+            logger.debug("JSON Body - " + str(http_body))
 
             issue = jira.jira_create_issue(
-                issue_summary=str(json.loads(body)["AWSAccountId"]),
-                issue_desc=str(json.loads(body))
+                issue_summary="AWS Account - " + str(http_body["AWSAccountId"]),
+                issue_desc=str(http_body)
             )
+
+            create_issue_status = 200 if "-" in issue else 400
 
             response.update({ 
                 "JiraAPI": { 
-                    "statusCode": 200,
-                    "body": str(issue)
+                    "statusCode": create_issue_status,
+                    "body": responses[create_issue_status]
                 }
             })
 
         return response
     
-    logger.error("HTTP Error - 500. Message: Invalid HTTP Body.")
+    logger.exception("HTTP Error - 500. Message: Invalid HTTP Body.")
     return { "statusCode": 500, "body": "Error" }
