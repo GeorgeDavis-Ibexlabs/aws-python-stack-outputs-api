@@ -76,7 +76,7 @@ def lambda_handler(event, context):
                 issue_desc=str(http_body)
             )
 
-            create_issue_status = 200 if "-" in issue else 400
+            create_issue_status = 200 if "-" in str(issue) else 400
 
             response.update({ 
                 "JiraAPI": { 
