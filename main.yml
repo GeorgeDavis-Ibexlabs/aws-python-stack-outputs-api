@@ -8,9 +8,14 @@ Parameters:
     Type: String
     Default: main
 
-  S3Key:
-    Description: S3 Bucket Name.
+  S3LambdaPostStackOutputsApiKey:
+    Description: S3 Object key for the Post Stack Outputs API Lambda function code zip file.
     Default: 'lambda-aws-python-stack-outputs-api.zip'
+    Type: String
+
+  S3LambdaArcheraDeploymentKey:
+    Description: S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.
+    Default: "lambda-dynamic-cfn-templates.zip"
     Type: String
 
 Resources:
@@ -145,7 +150,7 @@ Resources:
       Handler: postStackOutputLambda.lambda_handler
       Code:
         S3Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        S3Key: !Sub 'wafr-ftr-onboarding/${GitHubBranch}/${S3Key}'
+        S3Key: !Sub 'wafr-ftr-onboarding/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
           GITHUB_BRANCH: !Ref GitHubBranch
@@ -160,6 +165,78 @@ Resources:
           JIRA_API_TOKEN: '{{resolve:ssm:JIRA_API_TOKEN}}'
           JIRA_ENABLED: '{{resolve:ssm:JIRA_ENABLED}}'
           LOG_LEVEL: DEBUG
+
+  PostArcheraOnboardingLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+        - PolicyName: AllowCloudFormation
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStacks
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                Resource: !Sub "arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/IbexlabsArcheraCFNStack-*/*"
+        - PolicyName: AllowIAM
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:CreateRole
+                  - iam:GetRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:TagRole
+                  - iam:DeleteRole
+                  - iam:DeleteRolePolicy
+                Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/ReservedAI-*"
+
+  PostArcheraOnboardingLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.10
+      MemorySize: 128
+      Timeout: 25
+      Role: !GetAtt PostArcheraOnboardingLambdaRole.Arn
+      Handler: handler.lambda_handler
+      Code:
+        S3Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", S3BucketName]
+        S3Key: !Sub "wafr-ftr-onboarding/${GitHubBranch}/${S3LambdaArcheraDeploymentKey}"
+      Environment:
+        Variables:
+          STACK_ID: !Ref AWS::StackId
+          REGION: !Ref AWS::Region
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          BOTOCORE_LOGLEVEL: DEBUG
+          LOGLEVEL: DEBUG
+          ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
+          ARCHERA_PARTNER_ACCOUNT_ID: 'f5136ae5-bd29-483a-a48d-3675b28a2f36'
+          IBEXLABS_AWS_REGION_NAME: 'us-east-1'
+          CUSTOMER_ACCOUNT_NAME: !Sub "${DomainName} c/o Ibexlabs"
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
@@ -203,7 +280,7 @@ Resources:
       PayloadFormatVersion: '2.0'
       TimeoutInMillis: 30000
 
-  HttpApiRoutePostSend:
+  PostStackOutputLambdaHttpApiRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
@@ -212,6 +289,33 @@ Resources:
         - /
         - - integrations
           - !Ref PostStackOutputLambdaHttpApiIntegration
+
+  PostArcheraOnboardingLambdaHttpApiLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt PostStackOutputLambdaFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
+
+  PostArcheraOnboardingLambdaHttpApiIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt ArcheraOnboardingLambdaFunction.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 30000
+
+  PostArcheraOnboardingLambdaHttpApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: POST /archera-onboarding
+      Target: !Join
+        - /
+        - - integrations
+          - !Ref ArcheraOnboardingLambdaHttpApiIntegration
 
 Outputs:
   HttpApiId:
@@ -242,11 +346,15 @@ Metadata:
           default: Lambda Code Zip file configuration.
         Parameters:
           - GitHubBranch
-          - S3Key
+          - S3LambdaPostStackOutputsApiKey
+          - S3LambdaArcheraDeploymentKey
 
     ParameterLabels:
       GitHubBranch:
         default: "Please provide the GitHub branch to use. Recommended to leave this as `main`."
 
-      S3Key:
-        default: "Please provide the file name of the Lambda code zip file."
+      S3LambdaPostStackOutputsApiKey:
+        default: "Please provide the S3 Object key for the Post Stack Outputs API Lambda function code zip file."
+
+      S3LambdaArcheraDeploymentKey:
+        default: "Please provide the S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file."
