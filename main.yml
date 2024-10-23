@@ -10,12 +10,12 @@ Parameters:
 
   S3LambdaPostStackOutputsApiKey:
     Description: S3 Object key for the Post Stack Outputs API Lambda function code zip file.
-    Default: 'lambda-aws-python-stack-outputs-api.zip'
+    Default: 'http-api-lambda-post-stack-outputs.zip'
     Type: String
 
-  S3LambdaArcheraDeploymentKey:
+  S3LambdaArcheraApiOnboardingKey:
     Description: S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.
-    Default: "lambda-dynamic-cfn-templates.zip"
+    Default: "http-api-lambda-archera-api-onboarding.zip"
     Type: String
 
 Resources:
@@ -111,6 +111,24 @@ Resources:
   #     Type: String
   #     Value: true
 
+  SSMParameterProdArcheraPartnerAccountId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for PROD environments
+      Name: PROD_ARCHERA_PARTNER_ACCOUNT_ID
+      Type: String
+      Value: 'f5136ae5-bd29-483a-a48d-3675b28a2f36'
+
+  SSMParameterTestArcheraPartnerAccountId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for TEST environments
+      Name: TEST_ARCHERA_PARTNER_ACCOUNT_ID
+      Type: String
+      Value: '21d39c61-f420-4589-9ed8-1b02e92cfaa9'
+
   PostStackOutputLambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -166,7 +184,7 @@ Resources:
           JIRA_ENABLED: '{{resolve:ssm:JIRA_ENABLED}}'
           LOG_LEVEL: DEBUG
 
-  PostArcheraOnboardingLambdaRole:
+  PostArcheraApiOnboardingLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -215,17 +233,17 @@ Resources:
                   - iam:DeleteRolePolicy
                 Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/ReservedAI-*"
 
-  PostArcheraOnboardingLambdaFunction:
+  PostArcheraApiOnboardingLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
       Runtime: python3.10
       MemorySize: 128
       Timeout: 25
-      Role: !GetAtt PostArcheraOnboardingLambdaRole.Arn
+      Role: !GetAtt PostArcheraApiOnboardingLambdaRole.Arn
       Handler: handler.lambda_handler
       Code:
         S3Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", S3BucketName]
-        S3Key: !Sub "wafr-ftr-onboarding/${GitHubBranch}/${S3LambdaArcheraDeploymentKey}"
+        S3Key: !Sub "wafr-ftr-onboarding/${GitHubBranch}/${S3LambdaArcheraApiOnboardingKey}"
       Environment:
         Variables:
           STACK_ID: !Ref AWS::StackId
@@ -234,9 +252,9 @@ Resources:
           BOTOCORE_LOGLEVEL: DEBUG
           LOGLEVEL: DEBUG
           ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
-          ARCHERA_PARTNER_ACCOUNT_ID: 'f5136ae5-bd29-483a-a48d-3675b28a2f36'
           IBEXLABS_AWS_REGION_NAME: 'us-east-1'
-          CUSTOMER_ACCOUNT_NAME: !Sub "${DomainName} c/o Ibexlabs"
+          ENVIRONMENT: PROD
+          # CUSTOMER_ACCOUNT_NAME: !Sub "${DomainName} c/o Ibexlabs"
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
@@ -290,7 +308,7 @@ Resources:
         - - integrations
           - !Ref PostStackOutputLambdaHttpApiIntegration
 
-  PostArcheraOnboardingLambdaHttpApiLambdaPermission:
+  PostArcheraApiOnboardingLambdaHttpApiLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !GetAtt PostStackOutputLambdaFunction.Arn
@@ -298,16 +316,16 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
 
-  PostArcheraOnboardingLambdaHttpApiIntegration:
+  PostArcheraApiOnboardingLambdaHttpApiIntegration:
     Type: AWS::ApiGatewayV2::Integration
     Properties:
       ApiId: !Ref HttpApi
       IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt ArcheraOnboardingLambdaFunction.Arn
+      IntegrationUri: !GetAtt PostArcheraApiOnboardingLambdaFunction.Arn
       PayloadFormatVersion: '2.0'
       TimeoutInMillis: 30000
 
-  PostArcheraOnboardingLambdaHttpApiRoute:
+  PostArcheraApiOnboardingLambdaHttpApiRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
@@ -315,7 +333,7 @@ Resources:
       Target: !Join
         - /
         - - integrations
-          - !Ref ArcheraOnboardingLambdaHttpApiIntegration
+          - !Ref PostArcheraApiOnboardingLambdaHttpApiIntegration
 
 Outputs:
   HttpApiId:
@@ -347,7 +365,7 @@ Metadata:
         Parameters:
           - GitHubBranch
           - S3LambdaPostStackOutputsApiKey
-          - S3LambdaArcheraDeploymentKey
+          - S3LambdaArcheraApiOnboardingKey
 
     ParameterLabels:
       GitHubBranch:
@@ -356,5 +374,5 @@ Metadata:
       S3LambdaPostStackOutputsApiKey:
         default: "Please provide the S3 Object key for the Post Stack Outputs API Lambda function code zip file."
 
-      S3LambdaArcheraDeploymentKey:
+      S3LambdaArcheraApiOnboardingKey:
         default: "Please provide the S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file."
