@@ -110,31 +110,31 @@ jobs:
       - name:  Upload CloudFormation files to Amazon S3
         if: steps.changed-cfn-files.outputs.any_changed == 'true'
         run: |
-          aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/aws-python-stack-outputs-api/${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+          aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to us-east-1
       - name: Upload CloudFormation files to us-east-1
         if: steps.changed-cfn-files.outputs.any_changed == 'true'
         run: |
-          aws s3 sync . s3://us-east-1.${{ vars.BUCKET_BASE_URL }}/aws-python-stack-outputs-api/${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+          aws s3 sync . s3://us-east-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to us-east-2
       - name: Upload CloudFormation files to us-east-2
         if: steps.changed-cfn-files.outputs.any_changed == 'true'
         run: |
-          aws s3 sync . s3://us-east-2.${{ vars.BUCKET_BASE_URL }}/aws-python-stack-outputs-api/${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+          aws s3 sync . s3://us-east-2.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to us-west-1
       - name: Upload CloudFormation files to us-west-1
         if: steps.changed-cfn-files.outputs.any_changed == 'true'
         run: |
-          aws s3 sync . s3://us-west-1.${{ vars.BUCKET_BASE_URL }}/aws-python-stack-outputs-api/${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+          aws s3 sync . s3://us-west-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to ca-central-1
       - name: Upload CloudFormation files to ca-central-1
         if: steps.changed-cfn-files.outputs.any_changed == 'true'
         run: |
-          aws s3 sync . s3://ca-central-1.${{ vars.BUCKET_BASE_URL }}/aws-python-stack-outputs-api/${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+          aws s3 sync . s3://ca-central-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
   # (On Push) Build and Deploy changes in Lambda function within http-api-lambda-post-stack-outputs/
   push-build-deploy-lambda-post-stack-outputs:
