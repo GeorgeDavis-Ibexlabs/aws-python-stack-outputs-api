@@ -181,7 +181,8 @@ jobs:
       - name: Package Lambda
         if: steps.changed-lambda-files.outputs.any_changed == 'true'
         run: |
-          zip -r ${{ env.LAMBDA_ZIP_NAME }} . -x .git\*/\* -x *.yml -x .DS_Store -x .gitignore
+          cd ${{ env.LAMBDA_DIR_PATH }}/
+          zip -r ../${{ env.LAMBDA_ZIP_NAME }} .
 
       - name: Upload Lambda Package Zip
         if: steps.changed-lambda-files.outputs.any_changed == 'true'
