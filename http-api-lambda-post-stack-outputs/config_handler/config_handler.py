@@ -11,7 +11,7 @@ ConfigKeyValuePair = {
     'JIRA_AUTH_EMAIL': 'jira.auth_email',
     'JIRA_API_TOKEN': 'jira.api_token',
     'JIRA_DEFAULT_ISSUE_LABELS': 'jira.default_issue_labels',
-    'JIRA_ENABLED': 'jira.enabled'
+    'ENABLE_JIRA_INTEGRATION': 'jira.enabled'
 }
 
 # ConfigHandler: class to handle configuration file and environment variables

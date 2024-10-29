@@ -15,7 +15,7 @@ config_handler = ConfigHandler(logger=logger)
 config = config_handler.get_combined_config()
 logger.debug("Final combined config - " + str(config))
 
-if bool(environ.get("JIRA_ENABLED")):
+if bool(environ.get("ENABLE_JIRA_INTEGRATION")):
     jira = JiraHandler(logger=logger, config=config)
 
 def lambda_handler(event, context):
@@ -67,7 +67,7 @@ def lambda_handler(event, context):
                 }
             })
 
-        if bool(environ.get("JIRA_ENABLED")):
+        if bool(environ.get("ENABLE_JIRA_INTEGRATION")):
 
             logger.debug("JSON Body - " + str(http_body))
 
