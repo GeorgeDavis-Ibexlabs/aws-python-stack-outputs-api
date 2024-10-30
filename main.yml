@@ -18,98 +18,185 @@ Parameters:
     Default: "http-api-lambda-archera-api-onboarding.zip"
     Type: String
 
+  Environment:
+    Description: This is the type of environment this deployment caters to.
+    Default: 'PROD'
+    AllowedValues:
+      - 'PROD'
+      - 'TEST'
+    Type: String
+
+  ProdArcheraPartnerAccountId:
+    Description: This is the Archera Partner Account ID for the Production Archera Account.
+    MinLength: 24
+    MaxLength: 256
+    Type: String
+    NoEcho: true
+
+  ProdArcheraPartnerApiKey:
+    Description: This is the Archera Partner API key for the Production Archera Account.
+    MinLength: 24
+    MaxLength: 256
+    Type: String
+    NoEcho: true
+
+  TestArcheraPartnerAccountId:
+    Description: This is the Archera Partner Account ID for the Test Archera Account.
+    Default: ''
+    Type: String
+    NoEcho: true
+
+  TestArcheraPartnerApiKey:
+    Description: This is the Archera Partner API key for the Test Archera Account.
+    Default: ''
+    Type: String
+    NoEcho: true
+
+  EnableSlackIntegration:
+    Description: Enable this flag to get Slack notifications.
+    Default: false
+    Type: String
+
+  SlackWebhookUrl:
+    Description: This is the Slack webhook URL.
+    Default: ''
+    Type: String
+
+  SlackChannelName:
+    Description: This is the Slack channel name.
+    Default: ''
+    Type: String
+
+  SlackUsername:
+    Description: This is the Slack username.
+    Default: ''
+    Type: String
+
+  SlackIconUrl:
+    Description: This is the Slack username.
+    Default: ''
+    Type: String
+
+  JiraCloudUrl:
+    Description: This is the URL for your JIRA Cloud instance.
+    Default: ''
+    Type: String
+
+  JiraProjectKey:
+    Description: This is the JIRA Project key.
+    Default: ''
+    Type: String
+
+  JiraAuthEmail:
+    Description: This is the JIRA Authentication email.
+    Default: ''
+    Type: String
+
+  JiraApiToken:
+    Description: This is the JIRA API token.
+    Default: ''
+    Type: String
+
+  EnableJiraIntegration:
+    Description: This is the Slack username.
+    Default: ''
+    Type: String
+
+Conditions:
+  IsArcheraEnvProdFlag: !Equals [ !Ref Environment, 'PROD' ]
+
 Resources:
   # This section contains the list of SSM Parameters
-  #  
-  # SSMParameterEnableSlackIntegration:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: Enable Slack integration
-  #     Name: ENABLE_SLACK_INTEGRATION
-  #     Type: String
-  #     Value: <>
+  SSMParameterEnableSlackIntegration:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Enable Slack integration
+      Name: ENABLE_SLACK_INTEGRATION
+      Type: String
+      Value: !Ref EnableSlackIntegration
 
-  # SSMParameterSlackWebhookUrl:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the Slack Webhook URL
-  #     Name: SLACK_WEBHOOK_URL
-  #     Type: String
-  #     Value: <SLACK-WEBHOOK-URL-GOES-HERE>
+  SSMParameterSlackWebhookUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: This is the Slack Webhook URL
+      Name: SLACK_WEBHOOK_URL
+      Type: String
+      Value: !Ref SlackWebhookUrl
 
-  # SSMParameterSlackChannelName:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the Slack Channel Name to publish to
-  #     Name: SLACK_CHANNEL
-  #     Type: String
-  #     Value: <SLACK-CHANNEL-NAME-GOES-HERE>
+  SSMParameterSlackChannelName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: This is the Slack Channel Name to publish to
+      Name: SLACK_CHANNEL
+      Type: String
+      Value: !Ref SlackChannelName
 
-  # SSMParameterSlackUsername:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the Slack Username to use
-  #     Name: SLACK_USERNAME
-  #     Type: String
-  #     Value: <SLACK-USERNAME-GOES-HERE>
+  SSMParameterSlackUsername:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: This is the Slack Username to use
+      Name: SLACK_USERNAME
+      Type: String
+      Value: !Ref SlackUsername
 
-  # SSMParameterSlackIconUrl:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the URL of the Slack Display Icon to use when pushing Slack messages
-  #     Name: SLACK_ICON_URL
-  #     Type: String
-  #     Value: <SLACK-ICON-URL-GOES-HERE>
+  SSMParameterSlackIconUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: This is the URL of the Slack Display Icon to use when pushing Slack messages
+      Name: SLACK_ICON_URL
+      Type: String
+      Value: !Ref SlackIconUrl
 
-  # SSMParameterJiraCloudUrl:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Cloud URL
-  #     Name: JIRA_CLOUD_URL
-  #     Type: String
-  #     Value: <JIRA-CLOUD-URL-GOES-HERE>
+  SSMParameterEnableJiraIntegration:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: JIRA Enabled flag
+      Name: ENABLE_JIRA_INTEGRATION
+      Type: String
+      Value: !Ref EnableJiraIntegration
 
-  # SSMParameterJiraProjectKey:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Project key
-  #     Name: JIRA_PROJECT_KEY
-  #     Type: String
-  #     Value: <JIRA-PROJECT-ID-GOES-HERE>
+  SSMParameterJiraCloudUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: JIRA Cloud URL
+      Name: JIRA_CLOUD_URL
+      Type: String
+      Value: !Ref JiraCloudUrl
 
-  # SSMParameterJiraAuthEmail:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Authentication Email
-  #     Name: JIRA_AUTH_EMAIL
-  #     Type: String
-  #     Value: <JIRA-AUTH-EMAIL-GOES-HERE>
+  SSMParameterJiraProjectKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: JIRA Project key
+      Name: JIRA_PROJECT_KEY
+      Type: String
+      Value: !Ref JiraProjectKey
 
-  # SSMParameterJiraApiToken:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA API token
-  #     Name: JIRA_API_TOKEN
-  #     Type: String
-  #     Value: <JIRA-AUTH-TOKEN-GOES-HERE>
+  SSMParameterJiraAuthEmail:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: JIRA Authentication Email
+      Name: JIRA_AUTH_EMAIL
+      Type: String
+      Value: !Ref JiraAuthEmail
 
-  # SSMParameterJiraEnabled:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Enabled flag
-  #     Name: JIRA_ENABLED
-  #     Type: String
-  #     Value: true
+  SSMParameterJiraApiToken:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: JIRA API token
+      Name: JIRA_API_TOKEN
+      Type: String
+      Value: !Ref JiraApiToken
+      NoEcho: true
 
   SSMParameterProdArcheraPartnerAccountId:
     Type: AWS::SSM::Parameter
@@ -118,7 +205,16 @@ Resources:
       Description: Archera Partner Account Id for PROD environments
       Name: PROD_ARCHERA_PARTNER_ACCOUNT_ID
       Type: String
-      Value: 'f5136ae5-bd29-483a-a48d-3675b28a2f36'
+      Value: !Ref ProdArcheraPartnerAccountId
+
+  SSMParameterProdArcheraPartnerApiKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for PROD environments
+      Name: PROD_ARCHERA_PARTNER_API_KEY
+      Type: String
+      Value: !Ref ProdArcheraPartnerApiKey
 
   SSMParameterTestArcheraPartnerAccountId:
     Type: AWS::SSM::Parameter
@@ -127,7 +223,16 @@ Resources:
       Description: Archera Partner Account Id for TEST environments
       Name: TEST_ARCHERA_PARTNER_ACCOUNT_ID
       Type: String
-      Value: '21d39c61-f420-4589-9ed8-1b02e92cfaa9'
+      Value: !Ref TestArcheraPartnerAccountId
+
+  SSMParameterTestArcheraPartnerApiKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for TEST environments
+      Name: TEST_ARCHERA_PARTNER_API_KEY
+      Type: String
+      Value: !Ref TestArcheraPartnerApiKey
 
   PostStackOutputLambdaRole:
     Type: AWS::IAM::Role
@@ -177,11 +282,11 @@ Resources:
           SLACK_CHANNEL: '{{resolve:ssm:SLACK_CHANNEL}}'
           SLACK_USERNAME: '{{resolve:ssm:SLACK_USERNAME}}'
           SLACK_ICON_URL: '{{resolve:ssm:SLACK_ICON_URL}}'
+          ENABLE_JIRA_INTEGRATION: '{{resolve:ssm:ENABLE_JIRA_INTEGRATION}}'
           JIRA_CLOUD_URL: '{{resolve:ssm:JIRA_CLOUD_URL}}'
           JIRA_PROJECT_KEY: '{{resolve:ssm:JIRA_PROJECT_KEY}}'
           JIRA_AUTH_EMAIL: '{{resolve:ssm:JIRA_AUTH_EMAIL}}'
           JIRA_API_TOKEN: '{{resolve:ssm:JIRA_API_TOKEN}}'
-          JIRA_ENABLED: '{{resolve:ssm:JIRA_ENABLED}}'
           LOG_LEVEL: DEBUG
 
   PostArcheraApiOnboardingLambdaRole:
@@ -232,6 +337,18 @@ Resources:
                   - iam:DeleteRole
                   - iam:DeleteRolePolicy
                 Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/ReservedAI-*"
+        - PolicyName: AllowS3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:
+                  - s3:DeleteRole
+                  - s3:DeleteRolePolicy
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::wafr.ibexlabs.com"
+                  - !Sub "arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com"
 
   PostArcheraApiOnboardingLambdaFunction:
     Type: AWS::Lambda::Function
@@ -252,9 +369,18 @@ Resources:
           BOTOCORE_LOGLEVEL: DEBUG
           LOGLEVEL: DEBUG
           ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
-          IBEXLABS_AWS_REGION_NAME: 'us-east-1'
-          ENVIRONMENT: PROD
-          # CUSTOMER_ACCOUNT_NAME: !Sub "${DomainName} c/o Ibexlabs"
+          ENVIRONMENT: !Ref Environment
+          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !If
+            - IsArcheraEnvProdFlag
+            - !Ref SSMParameterProdArcheraPartnerAccountId
+            - !Ref SSMParameterTestArcheraPartnerAccountId
+          SSM_KEY_ARCHERA_PARTNER_API_KEY: !If
+            - IsArcheraEnvProdFlag
+            - !Ref SSMParameterProdArcheraPartnerApiKey
+            - !Ref SSMParameterTestArcheraPartnerApiKey
+          CUSTOMER_ACCOUNT_NAME_SUFFIX: 'c/o Ibexlabs'
+          TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref "AWS::Region", S3BucketName]
+          TEMPLATE_KEY_PREFIX: "/wafr-ftr-onboarding/archera-deployments/"
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
@@ -361,11 +487,33 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: Lambda Code Zip file configuration.
+          default: GitHub code repository branch.
         Parameters:
           - GitHubBranch
+
+      - Label:
+          default: Lambda Code Zip file configuration.
+        Parameters:
           - S3LambdaPostStackOutputsApiKey
           - S3LambdaArcheraApiOnboardingKey
+
+      - Label:
+          default: Slack Integration configuration.
+        Parameters:
+          - EnableSlackIntegration
+          - SlackWebhookUrl
+          - SlackChannelName
+          - SlackUsername
+          - SlackIconUrl
+
+      - Label:
+          default: JIRA Integration configuration.
+        Parameters:
+          - EnableJiraIntegration
+          - JiraCloudUrl
+          - JiraProjectKey
+          - JiraAuthEmail
+          - JiraApiToken
 
     ParameterLabels:
       GitHubBranch:
