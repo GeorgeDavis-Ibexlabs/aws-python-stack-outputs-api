@@ -20,10 +20,10 @@ Parameters:
 
   Environment:
     Description: This is the type of environment this deployment caters to.
-    Default: 'PROD'
     AllowedValues:
       - 'PROD'
       - 'TEST'
+    Default: 'PROD'
     Type: String
 
   ProdArcheraPartnerAccountId:
@@ -54,7 +54,10 @@ Parameters:
 
   EnableSlackIntegration:
     Description: Enable this flag to get Slack notifications.
-    Default: false
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
     Type: String
 
   SlackWebhookUrl:
@@ -77,6 +80,14 @@ Parameters:
     Default: ''
     Type: String
 
+  EnableJiraIntegration:
+    Description: Enable this flag to automate JIRA ticket creation.
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
+    Type: String
+
   JiraCloudUrl:
     Description: This is the URL for your JIRA Cloud instance.
     Default: ''
@@ -94,11 +105,6 @@ Parameters:
 
   JiraApiToken:
     Description: This is the JIRA API token.
-    Default: ''
-    Type: String
-
-  EnableJiraIntegration:
-    Description: This is the Slack username.
     Default: ''
     Type: String
 
@@ -513,6 +519,18 @@ Metadata:
           - JiraProjectKey
           - JiraAuthEmail
           - JiraApiToken
+
+      - Label:
+          default: PROD Archera Integration configuration.
+        Parameters:
+          - ProdArcheraPartnerAccountId
+          - ProdArcheraPartnerApiKey
+
+      - Label:
+          default: TEST Archera Integration configuration.
+        Parameters:
+          - TestArcheraPartnerAccountId
+          - TestArcheraPartnerApiKey
 
     ParameterLabels:
       GitHubBranch:
