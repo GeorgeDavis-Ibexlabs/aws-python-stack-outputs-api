@@ -196,7 +196,6 @@ Resources:
       Name: JIRA_API_TOKEN
       Type: String
       Value: !Ref JiraApiToken
-      NoEcho: true
 
   SSMParameterProdArcheraPartnerAccountId:
     Type: AWS::SSM::Parameter
@@ -343,9 +342,9 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - s3:
-                  - s3:DeleteRole
-                  - s3:DeleteRolePolicy
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
                 Resource:
                   - !Sub "arn:${AWS::Partition}:s3:::wafr.ibexlabs.com"
                   - !Sub "arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com"
