@@ -16,8 +16,8 @@ class Utils:
     def get_aws_secret(self, secret_arn: str, region_name: str) -> str:    
         
         # Create a Secrets Manager client
-        session = session.Session()
-        client = session.client(
+        boto3_session = session.Session()
+        client = boto3_session.client(
             service_name='secretsmanager',
             region_name=region_name
         )
