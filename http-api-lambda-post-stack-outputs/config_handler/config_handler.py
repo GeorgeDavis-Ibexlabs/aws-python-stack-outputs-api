@@ -4,6 +4,8 @@ import logging
 import traceback
 import json
 
+from utils.utils import Utils
+
 # The ConfigMap - Mapping between runtime environment variable keys and JSON Config keys. Will need to append 'INPUT_' when looking to map within GitHub Actions environment
 ConfigKeyValuePair = {
     'JIRA_CLOUD_URL': 'jira.cloud_url',
@@ -27,11 +29,17 @@ class ConfigHandler():
     #
     # Returns: ConfigHandler object
     # Raises: None
-    def __init__(self, logger: logging.Logger):
+    def __init__(self, logger: logging.Logger, region_name: str):
 
         # Create a JSON Config parser
         self.logger = logger
-        self.jira_cloud_url = self.jira_project_key = self.jira_auth_email = self.jira_api_token = ''
+        self.jira_cloud_url = self.jira_project_key = self.jira_auth_email = ''
+
+        utilsObj = Utils(logger=logger)
+        self.jira_api_token = utilsObj.get_aws_secret(
+            secret_arn=environ.get("JIRA_API_TOKEN"),
+            region_name=region_name
+        )
         self.jira_default_issue_labels = []
         self.jira_enabled = False
         self.config = self.build_config()
