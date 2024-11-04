@@ -1,5 +1,5 @@
 ---
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
 Description: This CloudFormation stack deploys a simple HTTP API with backend logic running on Python + AWS Lambda and API Gateway. It captures the HTTP request body and push a Slack notification and/or JIRA ticket to pre-configured  endpoints.
 
 Parameters:
@@ -15,7 +15,7 @@ Parameters:
 
   S3LambdaArcheraApiOnboardingKey:
     Description: S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.
-    Default: "http-api-lambda-archera-api-onboarding.zip"
+    Default: 'http-api-lambda-archera-api-onboarding.zip'
     Type: String
 
   Environment:
@@ -171,7 +171,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -181,7 +181,7 @@ Resources:
       Policies:
         - PolicyName: AllowLogging
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -206,7 +206,7 @@ Resources:
       Handler: postStackOutputLambda.lambda_handler
       Code:
         S3Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        S3Key: !Sub 'wafr-ftr-onboarding/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
+        S3Key: !Sub 'aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
           REGION: !Ref AWS::Region
@@ -227,7 +227,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -237,17 +237,17 @@ Resources:
       Policies:
         - PolicyName: AllowLogging
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
-                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
         - PolicyName: AllowCloudFormation
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -256,10 +256,10 @@ Resources:
                   - cloudformation:CreateStack
                   - cloudformation:UpdateStack
                   - cloudformation:DeleteStack
-                Resource: !Sub "arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/IbexlabsArcheraCFNStack-*/*"
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/IbexlabsArcheraCFNStack-*/*'
         - PolicyName: AllowIAM
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -270,10 +270,10 @@ Resources:
                   - iam:TagRole
                   - iam:DeleteRole
                   - iam:DeleteRolePolicy
-                Resource: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/ReservedAI-*"
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/ReservedAI-*'
         - PolicyName: AllowS3
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -281,8 +281,8 @@ Resources:
                   - s3:PutObject
                   - s3:ListBucket
                 Resource:
-                  - !Sub "arn:${AWS::Partition}:s3:::wafr.ibexlabs.com"
-                  - !Sub "arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com"
+                  - !Sub 'arn:${AWS::Partition}:s3:::wafr.ibexlabs.com'
+                  - !Sub 'arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com'
 
   PostArcheraApiOnboardingLambdaFunction:
     Type: AWS::Lambda::Function
@@ -293,8 +293,8 @@ Resources:
       Role: !GetAtt PostArcheraApiOnboardingLambdaRole.Arn
       Handler: handler.lambda_handler
       Code:
-        S3Bucket: !FindInMap [RegionMap, !Ref "AWS::Region", S3BucketName]
-        S3Key: !Sub "wafr-ftr-onboarding/${GitHubBranch}/${S3LambdaArcheraApiOnboardingKey}"
+        S3Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        S3Key: !Sub 'aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaArcheraApiOnboardingKey}'
       Environment:
         Variables:
           STACK_ID: !Ref AWS::StackId
@@ -313,8 +313,8 @@ Resources:
             - !Ref SSMParameterProdArcheraPartnerApiKey
             - !Ref SSMParameterTestArcheraPartnerApiKey
           CUSTOMER_ACCOUNT_NAME_SUFFIX: 'c/o Ibexlabs'
-          TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref "AWS::Region", S3BucketName]
-          TEMPLATE_KEY_PREFIX: "/wafr-ftr-onboarding/archera-deployments/"
+          TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+          TEMPLATE_KEY_PREFIX: '/wafr-ftr-onboarding/archera-deployments/'
 
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
@@ -450,6 +450,11 @@ Metadata:
           - JiraApiToken
 
       - Label:
+          default: Environment configuration.
+        Parameters:
+          - Environment
+
+      - Label:
           default: PROD Archera Integration configuration.
         Parameters:
           - ProdArcheraPartnerAccountId
@@ -463,10 +468,10 @@ Metadata:
 
     ParameterLabels:
       GitHubBranch:
-        default: "Please provide the GitHub branch to use. Recommended to leave this as `main`."
+        default: 'Please provide the GitHub branch to use. Recommended to leave this as `main`.'
 
       S3LambdaPostStackOutputsApiKey:
-        default: "Please provide the S3 Object key for the Post Stack Outputs API Lambda function code zip file."
+        default: 'Please provide the S3 Object key for the Post Stack Outputs API Lambda function code zip file.'
 
       S3LambdaArcheraApiOnboardingKey:
-        default: "Please provide the S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file."
+        default: 'Please provide the S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.'
