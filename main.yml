@@ -113,15 +113,6 @@ Conditions:
 
 Resources:
   # This section contains the list of SSM Parameters
-  SSMParameterEnableSlackIntegration:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: Enable Slack integration
-      Name: ENABLE_SLACK_INTEGRATION
-      Type: String
-      Value: !Ref EnableSlackIntegration
-
   SSMParameterSlackWebhookUrl:
     Type: AWS::SSM::Parameter
     Properties:
@@ -130,69 +121,6 @@ Resources:
       Name: SLACK_WEBHOOK_URL
       Type: String
       Value: !Ref SlackWebhookUrl
-
-  SSMParameterSlackChannelName:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: This is the Slack Channel Name to publish to
-      Name: SLACK_CHANNEL
-      Type: String
-      Value: !Ref SlackChannelName
-
-  SSMParameterSlackUsername:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: This is the Slack Username to use
-      Name: SLACK_USERNAME
-      Type: String
-      Value: !Ref SlackUsername
-
-  SSMParameterSlackIconUrl:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: This is the URL of the Slack Display Icon to use when pushing Slack messages
-      Name: SLACK_ICON_URL
-      Type: String
-      Value: !Ref SlackIconUrl
-
-  SSMParameterEnableJiraIntegration:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: JIRA Enabled flag
-      Name: ENABLE_JIRA_INTEGRATION
-      Type: String
-      Value: !Ref EnableJiraIntegration
-
-  SSMParameterJiraCloudUrl:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: JIRA Cloud URL
-      Name: JIRA_CLOUD_URL
-      Type: String
-      Value: !Ref JiraCloudUrl
-
-  SSMParameterJiraProjectKey:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: JIRA Project key
-      Name: JIRA_PROJECT_KEY
-      Type: String
-      Value: !Ref JiraProjectKey
-
-  SSMParameterJiraAuthEmail:
-    Type: AWS::SSM::Parameter
-    Properties:
-      DataType: text
-      Description: JIRA Authentication Email
-      Name: JIRA_AUTH_EMAIL
-      Type: String
-      Value: !Ref JiraAuthEmail
 
   SSMParameterJiraApiToken:
     Type: AWS::SSM::Parameter
@@ -281,17 +209,18 @@ Resources:
         S3Key: !Sub 'wafr-ftr-onboarding/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
+          REGION: !Ref AWS::Region
           GITHUB_BRANCH: !Ref GitHubBranch
-          ENABLE_SLACK_INTEGRATION: '{{resolve:ssm:ENABLE_SLACK_INTEGRATION}}'
-          SLACK_WEBHOOK_URL: '{{resolve:ssm:SLACK_WEBHOOK_URL}}'
-          SLACK_CHANNEL: '{{resolve:ssm:SLACK_CHANNEL}}'
-          SLACK_USERNAME: '{{resolve:ssm:SLACK_USERNAME}}'
-          SLACK_ICON_URL: '{{resolve:ssm:SLACK_ICON_URL}}'
-          ENABLE_JIRA_INTEGRATION: '{{resolve:ssm:ENABLE_JIRA_INTEGRATION}}'
-          JIRA_CLOUD_URL: '{{resolve:ssm:JIRA_CLOUD_URL}}'
-          JIRA_PROJECT_KEY: '{{resolve:ssm:JIRA_PROJECT_KEY}}'
-          JIRA_AUTH_EMAIL: '{{resolve:ssm:JIRA_AUTH_EMAIL}}'
-          JIRA_API_TOKEN: '{{resolve:ssm:JIRA_API_TOKEN}}'
+          ENABLE_SLACK_INTEGRATION: !Ref EnableSlackIntegration
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          SLACK_CHANNEL: !Ref SlackChannelName
+          SLACK_USERNAME: !Ref SlackUsername
+          SLACK_ICON_URL: !Ref SlackIconUrl
+          ENABLE_JIRA_INTEGRATION: !Ref EnableJiraIntegration
+          JIRA_CLOUD_URL: !Ref JiraCloudUrl
+          JIRA_PROJECT_KEY: !Ref JiraProjectKey
+          JIRA_AUTH_EMAIL: !Ref JiraAuthEmail
+          JIRA_API_TOKEN: !Ref JiraApiToken
           LOG_LEVEL: DEBUG
 
   PostArcheraApiOnboardingLambdaRole:
