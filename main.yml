@@ -1,5 +1,6 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: This CloudFormation stack deploys a simple HTTP API with backend logic running on Python + AWS Lambda and API Gateway. It captures the HTTP request body and push a Slack notification and/or JIRA ticket to pre-configured  endpoints.
 
 Parameters:
@@ -167,7 +168,26 @@ Resources:
       Type: String
       Value: !Ref TestArcheraPartnerApiKey
 
-  PostStackOutputLambdaRole:
+  ServerlessHttpApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: !Sub '/aws/http-api/aws-python-stack-outputs-api-${GitHubBranch}'
+
+  ServerlessHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: !Sub 'aws-python-stack-outputs-api-${GitHubBranch}'
+      StageName: $default
+      AccessLogSettings:
+        DestinationArn: !GetAtt ServerlessHttpApiLogGroup.Arn
+        Format: '{"requestTime":"$context.requestTime","requestId":"$context.requestId","apiId":"$context.apiId","resourcePath":"$context.routeKey","path":"$context.path","httpMethod":"$context.httpMethod","stage":"$context.stage","status":"$context.status","integrationStatus":"$context.integrationStatus","integrationLatency":"$context.integrationLatency","responseLatency":"$context.responseLatency","responseLength":"$context.responseLength","errorMessage":"$context.error.message","format":"SLS_HTTP_API_LOG","version":"1.0.0"}'
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: false
+      PropagateTags: true
+
+  ServerlessHttpApiPostStackOutputLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -196,17 +216,26 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*:*'
 
-  PostStackOutputLambdaFunction:
-    Type: AWS::Lambda::Function
+  ServerlessHttpApiPostStackOutputServerlessFunction:
+    Type: AWS::Serverless::Function
     Properties:
+      Architectures: x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /send
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: 2.0
+            TimeoutInMillis: 30000
       Runtime: python3.10
-      MemorySize: 128
-      Timeout: 25
-      Role: !GetAtt PostStackOutputLambdaRole.Arn
       Handler: postStackOutputLambda.lambda_handler
-      Code:
-        S3Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        S3Key: !Sub 'aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
+      CodeUri: !Join
+        - ''
+        - - 's3://'
+          - !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+          - !Sub '/aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
           REGION: !Ref AWS::Region
@@ -222,8 +251,13 @@ Resources:
           JIRA_AUTH_EMAIL: !Ref JiraAuthEmail
           JIRA_API_TOKEN: !Ref JiraApiToken
           LOG_LEVEL: DEBUG
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostStackOutputLambdaRole.Arn
 
-  PostArcheraApiOnboardingLambdaRole:
+  ServerlessHttpApiPostArcheraApiOnboardingLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -284,17 +318,26 @@ Resources:
                   - !Sub 'arn:${AWS::Partition}:s3:::wafr.ibexlabs.com'
                   - !Sub 'arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com'
 
-  PostArcheraApiOnboardingLambdaFunction:
-    Type: AWS::Lambda::Function
+  ServerlessHttpApiPostArcheraApiOnboardingServerlessFunction:
+    Type: AWS::Serverless::Function
     Properties:
+      Architectures: x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /archera-onboarding
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: 2.0
+            TimeoutInMillis: 30000
       Runtime: python3.10
-      MemorySize: 128
-      Timeout: 25
-      Role: !GetAtt PostArcheraApiOnboardingLambdaRole.Arn
       Handler: handler.lambda_handler
-      Code:
-        S3Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        S3Key: !Sub 'aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaArcheraApiOnboardingKey}'
+      CodeUri: !Join
+        - ''
+        - - 's3://'
+          - !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+          - !Sub '/aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaArcheraApiOnboardingKey}'
       Environment:
         Variables:
           STACK_ID: !Ref AWS::StackId
@@ -315,94 +358,20 @@ Resources:
           CUSTOMER_ACCOUNT_NAME_SUFFIX: 'c/o Ibexlabs'
           TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
           TEMPLATE_KEY_PREFIX: '/wafr-ftr-onboarding/archera-deployments/'
-
-  HttpApi:
-    Type: AWS::ApiGatewayV2::Api
-    Properties:
-      Name: !Sub 'aws-python-stack-outputs-api-${GitHubBranch}'
-      ProtocolType: HTTP
-
-  HttpApiLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: RetainExceptOnCreate
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub '/aws/http-api/aws-python-stack-outputs-api-${GitHubBranch}'
-
-  HttpApiStage:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      ApiId: !Ref HttpApi
-      StageName: $default
-      AutoDeploy: true
-      DefaultRouteSettings:
-        DetailedMetricsEnabled: false
-      AccessLogSettings:
-        DestinationArn: !GetAtt HttpApiLogGroup.Arn
-        Format: '{"requestTime":"$context.requestTime","requestId":"$context.requestId","apiId":"$context.apiId","resourcePath":"$context.routeKey","path":"$context.path","httpMethod":"$context.httpMethod","stage":"$context.stage","status":"$context.status","integrationStatus":"$context.integrationStatus","integrationLatency":"$context.integrationLatency","responseLatency":"$context.responseLatency","responseLength":"$context.responseLength","errorMessage":"$context.error.message","format":"SLS_HTTP_API_LOG","version":"1.0.0"}'
-
-  PostStackOutputLambdaHttpApiLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt PostStackOutputLambdaFunction.Arn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
-
-  PostStackOutputLambdaHttpApiIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref HttpApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt PostStackOutputLambdaFunction.Arn
-      PayloadFormatVersion: '2.0'
-      TimeoutInMillis: 30000
-
-  PostStackOutputLambdaHttpApiRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: POST /send
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref PostStackOutputLambdaHttpApiIntegration
-
-  PostArcheraApiOnboardingLambdaHttpApiLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt PostStackOutputLambdaFunction.Arn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
-
-  PostArcheraApiOnboardingLambdaHttpApiIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref HttpApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt PostArcheraApiOnboardingLambdaFunction.Arn
-      PayloadFormatVersion: '2.0'
-      TimeoutInMillis: 30000
-
-  PostArcheraApiOnboardingLambdaHttpApiRoute:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: POST /archera-onboarding
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref PostArcheraApiOnboardingLambdaHttpApiIntegration
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
 
 Outputs:
-  HttpApiId:
-    Description: Id of the HTTP API
-    Value: !Ref HttpApi
+  ServerlessHttpApiId:
+    Description: Id of the Serverless HTTP API
+    Value: !Ref ServerlessHttpApi
 
-  HttpApiUrl:
-    Description: URL of the HTTP API
-    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+  ServerlessHttpApiUrl:
+    Description: URL of the Serverless HTTP API
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
 
 Mappings:
   RegionMap:
