@@ -231,11 +231,9 @@ Resources:
             TimeoutInMillis: 30000
       Runtime: python3.10
       Handler: postStackOutputLambda.lambda_handler
-      CodeUri: !Join
-        - ''
-        - - 's3://'
-          - !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-          - !Sub '/aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub '/aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
           REGION: !Ref AWS::Region
@@ -333,11 +331,9 @@ Resources:
             TimeoutInMillis: 30000
       Runtime: python3.10
       Handler: handler.lambda_handler
-      CodeUri: !Join
-        - ''
-        - - 's3://'
-          - !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-          - !Sub '/aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaArcheraApiOnboardingKey}'
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub '/aws-python-stack-outputs-api/${GitHubBranch}/${S3LambdaArcheraApiOnboardingKey}'
       Environment:
         Variables:
           STACK_ID: !Ref AWS::StackId
