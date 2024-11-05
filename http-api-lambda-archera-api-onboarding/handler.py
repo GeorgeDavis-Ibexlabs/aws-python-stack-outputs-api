@@ -34,6 +34,8 @@ archera = Archera(
 # lambda_handler: This script executes as a Custom Resource on the Onboarding CloudFormation stack, dynamically deploying CloudFormation stack from Ibexlabs partners. The script is executed when the stack is created, updated and removed.
 def lambda_handler(event, context):
     
+    logger.debug('Event - ' + str(event))
+    logger.debug('Context - ' + str(context))
     logger.debug('Environment variables - ' + str(environ))
 
     # Parse HTTP Request Body for request parameters
@@ -81,16 +83,4 @@ def lambda_handler(event, context):
         except Exception as e:
             logger.exception('Update Stack Error - ' + str(traceback.print_tb(e.__traceback__)))
             # TODO: Send cfnresponse data
-            cfnresponse.send(event, context, cfnresponse.FAILED, {})
-
-    # Delete Stack - The following section gets executed when the deployed stack is deleted from AWS CloudFormation.
-    elif event['RequestType'] == 'Delete':
-
-        try:
-            logger.debug('Delete Stack Event - ' + str(event))
-            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-
-        # Handling `cfnresponse` error response when the stack is deleted but there is an exception in calling the API. 
-        except Exception as e:
-            logger.exception('Delete Stack Error - ' + str(traceback.print_tb(e.__traceback__)))
             cfnresponse.send(event, context, cfnresponse.FAILED, {})
