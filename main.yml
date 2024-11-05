@@ -227,7 +227,7 @@ Resources:
             Path: /send
             Method: POST
             ApiId: !Ref ServerlessHttpApi
-            PayloadFormatVersion: 2.0
+            PayloadFormatVersion: '2.0'
             TimeoutInMillis: 30000
       Runtime: python3.10
       Handler: postStackOutputLambda.lambda_handler
@@ -329,7 +329,7 @@ Resources:
             Path: /archera-onboarding
             Method: POST
             ApiId: !Ref ServerlessHttpApi
-            PayloadFormatVersion: 2.0
+            PayloadFormatVersion: '2.0'
             TimeoutInMillis: 30000
       Runtime: python3.10
       Handler: handler.lambda_handler
