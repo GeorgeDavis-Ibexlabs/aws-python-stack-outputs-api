@@ -219,7 +219,8 @@ Resources:
   ServerlessHttpApiPostStackOutputServerlessFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Architectures: x86_64
+      Architectures:
+        - x86_64
       Events:
         ApiEvent:
           Type: HttpApi
@@ -319,7 +320,8 @@ Resources:
   ServerlessHttpApiPostArcheraApiOnboardingServerlessFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Architectures: x86_64
+      Architectures:
+        - x86_64
       Events:
         ApiEvent:
           Type: HttpApi
