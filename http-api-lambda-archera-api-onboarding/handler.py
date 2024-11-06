@@ -39,16 +39,18 @@ def lambda_handler(event, context):
     logger.debug('Environment variables - ' + str(environ))
 
     # Parse HTTP Request Body for request parameters
-    customer_account_name = event['Request']
-    customer_aws_account_id = event['Requests']('CUSTOMER_AWS_ACCOUNT_ID')
+    import json
+    http_body = json.loads(event['body'])
+    customer_account_name = http_body['CUSTOMER_ACCOUNT_NAME']
+    request_type = http_body['REQUEST_TYPE']
 
     # Create Stack - The following section gets executed when the deployed stack is created or updated using AWS CloudFormation.
-    if event['RequestType'] == 'Create':
+    if request_type.upper() == 'CREATE':
 
         try:
             logger.debug('Create Stack Event - ' + str(event))
 
-            archera_onboarding_status, cfnresponse_data = archera.onboard(
+            archera_onboarding_status, cfnresponse_data = archera.create_account(
                 customer_account_name=customer_account_name + 'c/o Ibexlabs'
             ) # Archera needs `c/o Ibexlabs` suffix at the Partner portal level
 
@@ -63,7 +65,7 @@ def lambda_handler(event, context):
             cfnresponse.send(event, context, cfnresponse.FAILED, {})
 
     # Update Stack - The following section gets executed when the deployed parent stack is updated using AWS CloudFormation. It tries to find the child stack and trigger an update.
-    if event['RequestType'] == 'Update':
+    if request_type.upper() == 'UPDATE':
 
         try:
             logger.debug('Update Stack Event - ' + str(event))
