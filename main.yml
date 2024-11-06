@@ -215,6 +215,23 @@ Resources:
                   - logs:PutLogEvents
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*:*'
+        - PolicyName: AllowSSMAndSecretsManager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_API_KEY'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_API_KEY'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
 
   ServerlessHttpApiPostStackOutputServerlessFunction:
     Type: AWS::Serverless::Function
@@ -316,6 +333,23 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::wafr.ibexlabs.com'
                   - !Sub 'arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com'
+        - PolicyName: AllowSSMAndSecretsManager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_API_KEY'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_API_KEY'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
 
   ServerlessHttpApiPostArcheraApiOnboardingServerlessFunction:
     Type: AWS::Serverless::Function
