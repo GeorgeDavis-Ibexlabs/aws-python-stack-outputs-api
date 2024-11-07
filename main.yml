@@ -223,10 +223,10 @@ Resources:
                 Action:
                   - ssm:GetParameter
                 Resource:
-                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_ACCOUNT_ID'
-                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_API_KEY'
-                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_ACCOUNT_ID'
-                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_API_KEY'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/PROD_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/PROD_ARCHERA_PARTNER_API_KEY'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/TEST_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/TEST_ARCHERA_PARTNER_API_KEY'
               - Effect: Allow
                 Action:
                   - secretsmanager:GetSecretValue
