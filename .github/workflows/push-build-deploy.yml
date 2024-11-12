@@ -41,7 +41,7 @@ jobs:
         with:
           main-branch-name: ${{ steps.base_branch_name.outputs.current_branch }} # Get the last successful commit for the current branch.
           workflow-id: 'push-build-deploy.yml'
-          error-on-no-successful-workflow: true
+          # error-on-no-successful-workflow: true # Commented on first run  for `dev` branch
 
   # (On Push) Build and Deploy changes in CloudFormation files
   push-build-deploy-cfn:
