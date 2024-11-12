@@ -332,7 +332,9 @@ Resources:
                   - s3:ListBucket
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:s3:::wafr.ibexlabs.com'
+                  - !Sub 'arn:${AWS::Partition}:s3:::wafr.ibexlabs.com/*'
                   - !Sub 'arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com'
+                  - !Sub 'arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com/*'
         - PolicyName: AllowSSMAndSecretsManager
           PolicyDocument:
             Version: '2012-10-17'
@@ -389,7 +391,7 @@ Resources:
             - !Ref SSMParameterTestArcheraPartnerApiKey
           CUSTOMER_ACCOUNT_NAME_SUFFIX: 'c/o Ibexlabs'
           TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-          TEMPLATE_KEY_PREFIX: '/wafr-ftr-onboarding/archera-deployments/'
+          TEMPLATE_KEY_PREFIX: 'wafr-ftr-onboarding/archera-deployments/'
       PackageType: Zip
       MemorySize: 128
       Timeout: 30
