@@ -46,7 +46,7 @@ class s3CopyFiles:
                 Bucket=dst_bucket,
                 Key=dst_key_prefix + dst_key
             )
-            self.logger.debug(f"File '{dst_key}' uploaded to bucket '{dst_bucket}/{dst_key_prefix}'.")
+            self.logger.debug('File ' + dst_key + ' uploaded to bucket ' + dst_bucket + '/' + dst_key_prefix + '.')
 
             # Generate a presigned URL for the uploaded file
             presigned_url = self.s3_client.generate_presigned_url(
@@ -54,7 +54,7 @@ class s3CopyFiles:
                 Params={'Bucket': dst_bucket, 'Key': dst_key_prefix + dst_key},
                 ExpiresIn=expiration
             )
-            self.logger.debug("Generated presigned URL:", presigned_url)
+            self.logger.debug("Generated presigned URL: " + str(presigned_url))
             return presigned_url
 
         except Exception as e:
