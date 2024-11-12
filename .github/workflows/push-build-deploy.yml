@@ -1,0 +1,371 @@
+# Build and Deploy aws-python-stack-outputs-api
+name: push-build-deploy-ci
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for specific branches
+  push:
+    branches: ["main", "dev"]
+
+  # For a workflow to be reusable by other repositories
+  workflow_call:
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# These permissions are needed to interact with GitHub's OIDC Token endpoint.
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+  actions: read
+  pull-requests: read
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # (On Push) Build Init
+  push-init:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    outputs:      
+      current_branch: ${{ steps.base_branch_name.outputs.current_branch }}
+      base_sha: ${{ steps.last_successful_commit_push.outputs.base }}
+
+    steps:
+      - name: Get base branch name
+        id: base_branch_name
+        uses: tj-actions/branch-names@v8.0.1
+
+      - name: Nx Set SHAs
+        uses: nrwl/nx-set-shas@v4.1.1            
+        id: last_successful_commit_push
+        with:
+          main-branch-name: ${{ steps.base_branch_name.outputs.current_branch }} # Get the last successful commit for the current branch.
+          workflow-id: 'push-build-deploy.yml'
+          error-on-no-successful-workflow: true
+
+  # (On Push) Build and Deploy changes in CloudFormation files
+  push-build-deploy-cfn:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    needs: [push-init]
+    if: contains('refs/heads/main, refs/heads/dev', github.ref)
+    env:
+      GIT_BRANCH_NAME: ${{ needs.push-init.outputs.current_branch }}
+      GIT_BASE_SHA: ${{ needs.push-init.outputs.base_sha }}
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Git Checkout
+        uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Get changed CloudFormation files with the commit of the last successful workflow run
+        id: changed-cfn-files
+        uses: tj-actions/changed-files@v45.0.2
+        with:
+          base_sha: ${{ env.GIT_BASE_SHA }}
+          files_ignore: |
+            .github/**
+            docs/**
+            lambda/**
+            .git*
+            LICENSE
+
+      - name: List all changed CloudFormation files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-cfn-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+
+      - name: Setup Cloud Formation Linter
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        uses: scottbrenner/cfn-lint-action@v2.4.5
+
+      - name: Run Cloud Formation Linter
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        run: |
+          cfn-lint --version
+          cfn-lint -t ./main.yml
+
+      # Runs cfn_nag recursively using the runner's shell
+      - name: Stelligent cfn_nag
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        uses: stelligent/cfn_nag@v0.8.10
+        with:
+          input_path: main.yml
+          extra_args: --fail-on-warnings -o json
+
+      - name: Configure AWS Credentials Action for GitHub Actions
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-wafr-ftr-onboarding-role
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Upload CloudFormation files to Amazon S3
+      - name:  Upload CloudFormation files to Amazon S3
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        run: |
+          aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+
+      # Upload CloudFormation files to us-east-1
+      - name: Upload CloudFormation files to us-east-1
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        run: |
+          aws s3 sync . s3://us-east-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+
+      # Upload CloudFormation files to us-east-2
+      - name: Upload CloudFormation files to us-east-2
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        run: |
+          aws s3 sync . s3://us-east-2.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+
+      # Upload CloudFormation files to us-west-1
+      - name: Upload CloudFormation files to us-west-1
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        run: |
+          aws s3 sync . s3://us-west-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+
+      # Upload CloudFormation files to ca-central-1
+      - name: Upload CloudFormation files to ca-central-1
+        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        run: |
+          aws s3 sync . s3://ca-central-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
+
+  # (On Push) Build and Deploy changes in Lambda function within http-api-lambda-post-stack-outputs/
+  push-build-deploy-lambda-post-stack-outputs:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    needs: [push-init]
+    if: contains('refs/heads/main, refs/heads/dev', github.ref)
+    env:
+      GIT_BRANCH_NAME: ${{ needs.push-init.outputs.current_branch }}
+      GIT_BASE_SHA: ${{ needs.push-init.outputs.base_sha }}
+      LAMBDA_ZIP_NAME: http-api-lambda-post-stack-outputs.zip
+      LAMBDA_DIR_PATH: http-api-lambda-post-stack-outputs
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Git Checkout
+        uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files within env.LAMBDA_DIR_PATH
+        id: changed-lambda-files
+        uses: tj-actions/changed-files@v45.0.2
+        with:
+          base_sha: ${{ env.GIT_BASE_SHA }}
+          files: |
+            ${{ env.LAMBDA_DIR_PATH }}/**
+
+      - name: List all changed Lambda files
+        env:
+          ALL_CHANGED_LAMBDA_FILES: ${{ steps.changed-lambda-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_LAMBDA_FILES}; do
+            echo "$file was changed"
+          done
+
+      - name: Install Python requirements
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        run: |
+          cd ${{ env.LAMBDA_DIR_PATH }}/
+          pip3 install -r requirements.txt -t .
+
+      - name: Package Lambda
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        run: |
+          cd ${{ env.LAMBDA_DIR_PATH }}/
+          zip -r ../${{ env.LAMBDA_ZIP_NAME }} .
+
+      - name: Upload Lambda Package Zip
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: ${{ env.LAMBDA_ZIP_NAME }}
+          path: ${{ env.LAMBDA_ZIP_NAME }}
+          retention-days: 30
+
+      - name: Configure AWS Credentials Action for GitHub Actions
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-wafr-ftr-onboarding-role
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Upload lambda zip to Amazon S3
+      - name: Upload lambda zip to Amazon S3
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        run: |
+          aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include ${{ env.LAMBDA_ZIP_NAME }}
+
+      # Copy lambda zip across region to us-east-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-east-1
+          DST_BUCKET: us-east-1.${{ vars.BUCKET_BASE_URL }}
+
+      # Copy lambda zip across region to us-east-2
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-east-2
+          DST_BUCKET: us-east-2.${{ vars.BUCKET_BASE_URL }}
+
+      # Copy lambda zip across region to us-west-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-west-1
+          DST_BUCKET: us-west-1.${{ vars.BUCKET_BASE_URL }}
+
+      # Copy lambda zip across region to ca-central-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: ca-central-1
+          DST_BUCKET: ca-central-1.${{ vars.BUCKET_BASE_URL }}
+
+  # (On Push) Build and Deploy changes in Lambda function within http-api-lambda-archera-api-onboarding/
+  push-build-deploy-lambda-archera-api-onboarding:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    needs: [push-init]
+    if: contains('refs/heads/main, refs/heads/dev', github.ref)
+    env:
+      GIT_BRANCH_NAME: ${{ needs.push-init.outputs.current_branch }}
+      GIT_BASE_SHA: ${{ needs.push-init.outputs.base_sha }}
+      LAMBDA_ZIP_NAME: http-api-lambda-archera-api-onboarding.zip
+      LAMBDA_DIR_PATH: http-api-lambda-archera-api-onboarding
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Git Checkout
+        uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files within env.LAMBDA_DIR_PATH
+        id: changed-lambda-files
+        uses: tj-actions/changed-files@v45.0.2
+        with:
+          base_sha: ${{ env.GIT_BASE_SHA }}
+          files: |
+            ${{ env.LAMBDA_DIR_PATH }}/**
+
+      - name: List all changed Lambda files
+        env:
+          ALL_CHANGED_LAMBDA_FILES: ${{ steps.changed-lambda-files.outputs.all_changed_files }}
+        run: |
+          for file in ${ALL_CHANGED_LAMBDA_FILES}; do
+            echo "$file was changed"
+          done
+
+      - name: Install Python requirements
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        run: |
+          cd ${{ env.LAMBDA_DIR_PATH }}/
+          pip3 install -r requirements.txt -t .
+
+      - name: Package Lambda
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        run: |
+          cd ${{ env.LAMBDA_DIR_PATH }}/
+          zip -r ../${{ env.LAMBDA_ZIP_NAME }} .
+
+      - name: Upload Lambda Package Zip
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: ${{ env.LAMBDA_ZIP_NAME }}
+          path: ${{ env.LAMBDA_ZIP_NAME }}
+          retention-days: 30
+
+      - name: Configure AWS Credentials Action for GitHub Actions
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-wafr-ftr-onboarding-role
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # Upload lambda zip to Amazon S3
+      - name: Upload lambda zip to Amazon S3
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        run: |
+          aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include ${{ env.LAMBDA_ZIP_NAME }}
+
+      # Copy lambda zip across region to us-east-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-east-1
+          DST_BUCKET: us-east-1.${{ vars.BUCKET_BASE_URL }}
+
+      # Copy lambda zip across region to us-east-2
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-east-2
+          DST_BUCKET: us-east-2.${{ vars.BUCKET_BASE_URL }}
+
+      # Copy lambda zip across region to us-west-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: us-west-1
+          DST_BUCKET: us-west-1.${{ vars.BUCKET_BASE_URL }}
+
+      # Copy lambda zip across region to ca-central-1
+      - name: Copy files across S3 buckets, primarily AWS Lambda zip files
+        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
+        with:
+          SRC_REGION: ${{ vars.AWS_REGION }}
+          SRC_BUCKET: ${{ vars.BUCKET_BASE_URL }}
+          SRC_KEY_PREFIX: ${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/
+          SRC_KEY: ${{ env.LAMBDA_ZIP_NAME }}
+          DST_REGION: ca-central-1
+          DST_BUCKET: ca-central-1.${{ vars.BUCKET_BASE_URL }}

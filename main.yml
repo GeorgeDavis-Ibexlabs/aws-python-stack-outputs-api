@@ -1,116 +1,186 @@
 ---
-AWSTemplateFormatVersion: "2010-09-09"
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
 Description: This CloudFormation stack deploys a simple HTTP API with backend logic running on Python + AWS Lambda and API Gateway. It captures the HTTP request body and push a Slack notification and/or JIRA ticket to pre-configured  endpoints.
 
 Parameters:
-  GitHubBranch:
-    Description: 'GitHub Branch. Example: main, dev.'
+  TestStageGitHubBranch:
+    Description: 'GitHub Branch for the TEST stage of the HTTP API. Defaults to dev.'
     Type: String
-    Default: main
+    Default: dev
 
-  S3Key:
-    Description: S3 Bucket Name.
-    Default: 'lambda-aws-python-stack-outputs-api.zip'
+  S3LambdaPostStackOutputsApiKey:
+    Description: S3 Object key for the Post Stack Outputs API Lambda function code zip file.
+    Default: 'http-api-lambda-post-stack-outputs.zip'
+    Type: String
+
+  S3LambdaArcheraApiOnboardingKey:
+    Description: S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.
+    Default: 'http-api-lambda-archera-api-onboarding.zip'
+    Type: String
+
+  ProdArcheraPartnerAccountId:
+    Description: This is the Archera Partner Account ID for the Production Archera Account.
+    MinLength: 24
+    MaxLength: 256
+    Type: String
+    NoEcho: true
+
+  ProdArcheraPartnerApiKey:
+    Description: This is the Archera Partner API key for the Production Archera Account.
+    MinLength: 24
+    MaxLength: 256
+    Type: String
+    NoEcho: true
+
+  TestArcheraPartnerAccountId:
+    Description: This is the Archera Partner Account ID for the Test Archera Account.
+    Default: ''
+    Type: String
+    NoEcho: true
+
+  TestArcheraPartnerApiKey:
+    Description: This is the Archera Partner API key for the Test Archera Account.
+    Default: ''
+    Type: String
+    NoEcho: true
+
+  EnableSlackIntegration:
+    Description: Enable this flag to get Slack notifications.
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
+    Type: String
+
+  SlackWebhookUrl:
+    Description: This is the Slack webhook URL.
+    Default: ''
+    Type: String
+
+  SlackChannelName:
+    Description: This is the Slack channel name.
+    Default: ''
+    Type: String
+
+  SlackUsername:
+    Description: This is the Slack username.
+    Default: ''
+    Type: String
+
+  SlackIconUrl:
+    Description: This is the Slack username.
+    Default: ''
+    Type: String
+
+  EnableJiraIntegration:
+    Description: Enable this flag to automate JIRA ticket creation.
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
+    Type: String
+
+  JiraCloudUrl:
+    Description: This is the URL for your JIRA Cloud instance.
+    Default: ''
+    Type: String
+
+  JiraProjectKey:
+    Description: This is the JIRA Project key.
+    Default: ''
+    Type: String
+
+  JiraAuthEmail:
+    Description: This is the JIRA Authentication email.
+    Default: ''
+    Type: String
+
+  JiraApiToken:
+    Description: This is the JIRA API token.
+    Default: ''
     Type: String
 
 Resources:
   # This section contains the list of SSM Parameters
-  #  
-  # SSMParameterEnableSlackIntegration:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: Enable Slack integration
-  #     Name: ENABLE_SLACK_INTEGRATION
-  #     Type: String
-  #     Value: <>
+  SSMParameterSlackWebhookUrl:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: This is the Slack Webhook URL
+      Name: SLACK_WEBHOOK_URL
+      Type: String
+      Value: !Ref SlackWebhookUrl
 
-  # SSMParameterSlackWebhookUrl:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the Slack Webhook URL
-  #     Name: SLACK_WEBHOOK_URL
-  #     Type: String
-  #     Value: <SLACK-WEBHOOK-URL-GOES-HERE>
+  SSMParameterJiraApiToken:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: JIRA API token
+      Name: JIRA_API_TOKEN
+      Type: String
+      Value: !Ref JiraApiToken
 
-  # SSMParameterSlackChannelName:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the Slack Channel Name to publish to
-  #     Name: SLACK_CHANNEL
-  #     Type: String
-  #     Value: <SLACK-CHANNEL-NAME-GOES-HERE>
+  SSMParameterProdArcheraPartnerAccountId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for PROD environments
+      Name: PROD_ARCHERA_PARTNER_ACCOUNT_ID
+      Type: String
+      Value: !Ref ProdArcheraPartnerAccountId
 
-  # SSMParameterSlackUsername:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the Slack Username to use
-  #     Name: SLACK_USERNAME
-  #     Type: String
-  #     Value: <SLACK-USERNAME-GOES-HERE>
+  SSMParameterProdArcheraPartnerApiKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for PROD environments
+      Name: PROD_ARCHERA_PARTNER_API_KEY
+      Type: String
+      Value: !Ref ProdArcheraPartnerApiKey
 
-  # SSMParameterSlackIconUrl:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: This is the URL of the Slack Display Icon to use when pushing Slack messages
-  #     Name: SLACK_ICON_URL
-  #     Type: String
-  #     Value: <SLACK-ICON-URL-GOES-HERE>
+  SSMParameterTestArcheraPartnerAccountId:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for TEST environments
+      Name: TEST_ARCHERA_PARTNER_ACCOUNT_ID
+      Type: String
+      Value: !Ref TestArcheraPartnerAccountId
 
-  # SSMParameterJiraCloudUrl:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Cloud URL
-  #     Name: JIRA_CLOUD_URL
-  #     Type: String
-  #     Value: <JIRA-CLOUD-URL-GOES-HERE>
+  SSMParameterTestArcheraPartnerApiKey:
+    Type: AWS::SSM::Parameter
+    Properties:
+      DataType: text
+      Description: Archera Partner Account Id for TEST environments
+      Name: TEST_ARCHERA_PARTNER_API_KEY
+      Type: String
+      Value: !Ref TestArcheraPartnerApiKey
 
-  # SSMParameterJiraProjectKey:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Project key
-  #     Name: JIRA_PROJECT_KEY
-  #     Type: String
-  #     Value: <JIRA-PROJECT-ID-GOES-HERE>
+  ServerlessHttpApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: RetainExceptOnCreate
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: /aws/http-api/aws-python-stack-outputs-api
 
-  # SSMParameterJiraAuthEmail:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Authentication Email
-  #     Name: JIRA_AUTH_EMAIL
-  #     Type: String
-  #     Value: <JIRA-AUTH-EMAIL-GOES-HERE>
+  ServerlessHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Name: aws-python-stack-outputs-api
+      StageName: $default
+      AccessLogSettings:
+        DestinationArn: !GetAtt ServerlessHttpApiLogGroup.Arn
+        Format: '{"requestTime":"$context.requestTime","requestId":"$context.requestId","apiId":"$context.apiId","resourcePath":"$context.routeKey","path":"$context.path","httpMethod":"$context.httpMethod","stage":"$context.stage","status":"$context.status","integrationStatus":"$context.integrationStatus","integrationLatency":"$context.integrationLatency","responseLatency":"$context.responseLatency","responseLength":"$context.responseLength","errorMessage":"$context.error.message","format":"SLS_HTTP_API_LOG","version":"1.0.0"}'
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: false
+      PropagateTags: true
 
-  # SSMParameterJiraApiToken:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA API token
-  #     Name: JIRA_API_TOKEN
-  #     Type: String
-  #     Value: <JIRA-AUTH-TOKEN-GOES-HERE>
-
-  # SSMParameterJiraEnabled:
-  #   Type: AWS::SSM::Parameter
-  #   Properties:
-  #     DataType: text
-  #     Description: JIRA Enabled flag
-  #     Name: JIRA_ENABLED
-  #     Type: String
-  #     Value: true
-
-  PostStackOutputLambdaRole:
+  ServerlessHttpApiPostStackOutputLambdaRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal:
@@ -120,7 +190,7 @@ Resources:
       Policies:
         - PolicyName: AllowLogging
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
@@ -134,93 +204,270 @@ Resources:
                   - logs:PutLogEvents
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*:*:*'
+        - PolicyName: AllowSSMAndSecretsManager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/PROD_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/PROD_ARCHERA_PARTNER_API_KEY'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/TEST_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/TEST_ARCHERA_PARTNER_API_KEY'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
 
-  PostStackOutputLambdaFunction:
-    Type: AWS::Lambda::Function
+  ServerlessHttpApiPostArcheraApiOnboardingLambdaRole:
+    Type: AWS::IAM::Role
     Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
+        - PolicyName: AllowCloudFormation
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStackResources
+                  - cloudformation:DescribeStacks
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/IbexlabsArcheraCFNStack-*/*'
+        - PolicyName: AllowIAM
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:CreateRole
+                  - iam:GetRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:TagRole
+                  - iam:DeleteRole
+                  - iam:DeleteRolePolicy
+                Resource: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:role/ReservedAI-*'
+        - PolicyName: AllowS3
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::wafr.ibexlabs.com'
+                  - !Sub 'arn:${AWS::Partition}:s3:::wafr.ibexlabs.com/*'
+                  - !Sub 'arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com'
+                  - !Sub 'arn:${AWS::Partition}:s3:::*.wafr.ibexlabs.com/*'
+        - PolicyName: AllowSSMAndSecretsManager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_API_KEY'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_API_KEY'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+
+  # ServerlessHttpApiProdPostStackOutputServerlessFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     Architectures:
+  #       - x86_64
+  #     Events:
+  #       ApiEvent:
+  #         Type: HttpApi
+  #         Properties:
+  #           Path: /prod/send
+  #           Method: POST
+  #           ApiId: !Ref ServerlessHttpApi
+  #           PayloadFormatVersion: '2.0'
+  #           TimeoutInMillis: 30000
+  #     Runtime: python3.10
+  #     Handler: postStackOutputLambda.lambda_handler
+  #     CodeUri:
+  #       Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+  #       Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaPostStackOutputsApiKey}'
+  #     Environment:
+  #       Variables:
+  #         REGION: !Ref AWS::Region
+  #         GITHUB_BRANCH: main
+  #         ENABLE_SLACK_INTEGRATION: !Ref EnableSlackIntegration
+  #         SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+  #         SLACK_CHANNEL: !Ref SlackChannelName
+  #         SLACK_USERNAME: !Ref SlackUsername
+  #         SLACK_ICON_URL: !Ref SlackIconUrl
+  #         ENABLE_JIRA_INTEGRATION: !Ref EnableJiraIntegration
+  #         JIRA_CLOUD_URL: !Ref JiraCloudUrl
+  #         JIRA_PROJECT_KEY: !Ref JiraProjectKey
+  #         JIRA_AUTH_EMAIL: !Ref JiraAuthEmail
+  #         JIRA_API_TOKEN: !Ref JiraApiToken
+  #         LOG_LEVEL: DEBUG
+  #     PackageType: Zip
+  #     MemorySize: 128
+  #     Timeout: 30
+  #     PropagateTags: true
+  #     Role: !GetAtt ServerlessHttpApiPostStackOutputLambdaRole.Arn
+
+  # ServerlessHttpApiPostArcheraApiProdOnboardingServerlessFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     Architectures:
+  #       - x86_64
+  #     Events:
+  #       ApiEvent:
+  #         Type: HttpApi
+  #         Properties:
+  #           Path: /prod/archera-onboarding
+  #           Method: POST
+  #           ApiId: !Ref ServerlessHttpApi
+  #           PayloadFormatVersion: '2.0'
+  #           TimeoutInMillis: 30000
+  #     Runtime: python3.10
+  #     Handler: handler.lambda_handler
+  #     CodeUri:
+  #       Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+  #       Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaArcheraApiOnboardingKey}'
+  #     Environment:
+  #       Variables:
+  #         STACK_ID: !Ref AWS::StackId
+  #         REGION: !Ref AWS::Region
+  #         AWS_ACCOUNT_ID: !Ref AWS::AccountId
+  #         BOTOCORE_LOGLEVEL: DEBUG
+  #         LOGLEVEL: DEBUG
+  #         ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
+  #         SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterProdArcheraPartnerAccountId
+  #         SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterProdArcheraPartnerApiKey
+  #         TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+  #         TEMPLATE_KEY_PREFIX: 'wafr-ftr-onboarding/archera-deployments/'
+  #     PackageType: Zip
+  #     MemorySize: 128
+  #     Timeout: 30
+  #     PropagateTags: true
+  #     Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
+
+  ServerlessHttpApiTestPostStackOutputServerlessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /test/send
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: '2.0'
+            TimeoutInMillis: 30000
       Runtime: python3.10
-      MemorySize: 128
-      Timeout: 25
-      Role: !GetAtt PostStackOutputLambdaRole.Arn
       Handler: postStackOutputLambda.lambda_handler
-      Code:
-        S3Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        S3Key: !Sub 'wafr-ftr-onboarding/${GitHubBranch}/${S3Key}'
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub 'aws-python-stack-outputs-api/${TestStageGitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
-          GITHUB_BRANCH: !Ref GitHubBranch
-          ENABLE_SLACK_INTEGRATION: '{{resolve:ssm:ENABLE_SLACK_INTEGRATION}}'
-          SLACK_WEBHOOK_URL: '{{resolve:ssm:SLACK_WEBHOOK_URL}}'
-          SLACK_CHANNEL: '{{resolve:ssm:SLACK_CHANNEL}}'
-          SLACK_USERNAME: '{{resolve:ssm:SLACK_USERNAME}}'
-          SLACK_ICON_URL: '{{resolve:ssm:SLACK_ICON_URL}}'
-          JIRA_CLOUD_URL: '{{resolve:ssm:JIRA_CLOUD_URL}}'
-          JIRA_PROJECT_KEY: '{{resolve:ssm:JIRA_PROJECT_KEY}}'
-          JIRA_AUTH_EMAIL: '{{resolve:ssm:JIRA_AUTH_EMAIL}}'
-          JIRA_API_TOKEN: '{{resolve:ssm:JIRA_API_TOKEN}}'
-          JIRA_ENABLED: '{{resolve:ssm:JIRA_ENABLED}}'
+          REGION: !Ref AWS::Region
+          GITHUB_BRANCH: !Ref TestStageGitHubBranch
+          ENABLE_SLACK_INTEGRATION: !Ref EnableSlackIntegration
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          SLACK_CHANNEL: !Ref SlackChannelName
+          SLACK_USERNAME: !Ref SlackUsername
+          SLACK_ICON_URL: !Ref SlackIconUrl
+          ENABLE_JIRA_INTEGRATION: !Ref EnableJiraIntegration
+          JIRA_CLOUD_URL: !Ref JiraCloudUrl
+          JIRA_PROJECT_KEY: !Ref JiraProjectKey
+          JIRA_AUTH_EMAIL: !Ref JiraAuthEmail
+          JIRA_API_TOKEN: !Ref JiraApiToken
           LOG_LEVEL: DEBUG
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostStackOutputLambdaRole.Arn
 
-  HttpApi:
-    Type: AWS::ApiGatewayV2::Api
+  ServerlessHttpApiPostArcheraApiTestOnboardingServerlessFunction:
+    Type: AWS::Serverless::Function
     Properties:
-      Name: !Sub 'aws-python-stack-outputs-api-${GitHubBranch}'
-      ProtocolType: HTTP
-
-  HttpApiLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: RetainExceptOnCreate
-    UpdateReplacePolicy: Retain
-    Properties:
-      LogGroupName: !Sub '/aws/http-api/aws-python-stack-outputs-api-${GitHubBranch}'
-
-  HttpApiStage:
-    Type: AWS::ApiGatewayV2::Stage
-    Properties:
-      ApiId: !Ref HttpApi
-      StageName: $default
-      AutoDeploy: true
-      DefaultRouteSettings:
-        DetailedMetricsEnabled: false
-      AccessLogSettings:
-        DestinationArn: !GetAtt HttpApiLogGroup.Arn
-        Format: '{"requestTime":"$context.requestTime","requestId":"$context.requestId","apiId":"$context.apiId","resourcePath":"$context.routeKey","path":"$context.path","httpMethod":"$context.httpMethod","stage":"$context.stage","status":"$context.status","integrationStatus":"$context.integrationStatus","integrationLatency":"$context.integrationLatency","responseLatency":"$context.responseLatency","responseLength":"$context.responseLength","errorMessage":"$context.error.message","format":"SLS_HTTP_API_LOG","version":"1.0.0"}'
-
-  PostStackOutputLambdaHttpApiLambdaPermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !GetAtt PostStackOutputLambdaFunction.Arn
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub 'arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*'
-
-  PostStackOutputLambdaHttpApiIntegration:
-    Type: AWS::ApiGatewayV2::Integration
-    Properties:
-      ApiId: !Ref HttpApi
-      IntegrationType: AWS_PROXY
-      IntegrationUri: !GetAtt PostStackOutputLambdaFunction.Arn
-      PayloadFormatVersion: '2.0'
-      TimeoutInMillis: 30000
-
-  HttpApiRoutePostSend:
-    Type: AWS::ApiGatewayV2::Route
-    Properties:
-      ApiId: !Ref HttpApi
-      RouteKey: POST /send
-      Target: !Join
-        - /
-        - - integrations
-          - !Ref PostStackOutputLambdaHttpApiIntegration
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /test/archera-onboarding
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: '2.0'
+            TimeoutInMillis: 30000
+      Runtime: python3.10
+      Handler: handler.lambda_handler
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub 'aws-python-stack-outputs-api/${TestStageGitHubBranch}/${S3LambdaArcheraApiOnboardingKey}'
+      Environment:
+        Variables:
+          STACK_ID: !Ref AWS::StackId
+          REGION: !Ref AWS::Region
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          BOTOCORE_LOGLEVEL: DEBUG
+          LOGLEVEL: DEBUG
+          ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
+          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterTestArcheraPartnerAccountId
+          SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterTestArcheraPartnerApiKey
+          TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+          TEMPLATE_KEY_PREFIX: 'wafr-ftr-onboarding/archera-deployments/'
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
 
 Outputs:
-  HttpApiId:
-    Description: Id of the HTTP API
-    Value: !Ref HttpApi
+  ServerlessHttpApiId:
+    Description: Id of the Serverless HTTP API
+    Value: !Ref ServerlessHttpApi
 
-  HttpApiUrl:
-    Description: URL of the HTTP API
-    Value: !Sub 'https://${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}'
+  ServerlessHttpApiProdUrl:
+    Description: URL of the Serverless HTTP API (PROD)
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/prod'
+
+  ServerlessHttpApiTestUrl:
+    Description: URL of the Serverless HTTP API (TEST)
+    Value: !Sub 'https://${ServerlessHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/test'
 
 Mappings:
   RegionMap:
@@ -239,14 +486,52 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
+          default: GitHub code repository branch.
+        Parameters:
+          - TestStageGitHubBranch
+
+      - Label:
           default: Lambda Code Zip file configuration.
         Parameters:
-          - GitHubBranch
-          - S3Key
+          - S3LambdaPostStackOutputsApiKey
+          - S3LambdaArcheraApiOnboardingKey
+
+      - Label:
+          default: Slack Integration configuration.
+        Parameters:
+          - EnableSlackIntegration
+          - SlackWebhookUrl
+          - SlackChannelName
+          - SlackUsername
+          - SlackIconUrl
+
+      - Label:
+          default: JIRA Integration configuration.
+        Parameters:
+          - EnableJiraIntegration
+          - JiraCloudUrl
+          - JiraProjectKey
+          - JiraAuthEmail
+          - JiraApiToken
+
+      - Label:
+          default: PROD Archera Integration configuration.
+        Parameters:
+          - ProdArcheraPartnerAccountId
+          - ProdArcheraPartnerApiKey
+
+      - Label:
+          default: TEST Archera Integration configuration.
+        Parameters:
+          - TestArcheraPartnerAccountId
+          - TestArcheraPartnerApiKey
 
     ParameterLabels:
-      GitHubBranch:
-        default: "Please provide the GitHub branch to use. Recommended to leave this as `main`."
+      TestStageGitHubBranch:
+        default: 'Please provide the GitHub branch to use. Recommended to leave this as `dev`.'
 
-      S3Key:
-        default: "Please provide the file name of the Lambda code zip file."
+      S3LambdaPostStackOutputsApiKey:
+        default: 'Please provide the S3 Object key for the Post Stack Outputs API Lambda function code zip file.'
+
+      S3LambdaArcheraApiOnboardingKey:
+        default: 'Please provide the S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.'
