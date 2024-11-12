@@ -24,12 +24,12 @@ class Archera:
         ssm_key_partner_org_account_id = environ.get('SSM_KEY_ARCHERA_PARTNER_ORG_ID') # Archera Partner Account ID
         ssm_key_partner_api_key = environ.get('SSM_KEY_ARCHERA_PARTNER_API_KEY')
 
-        self.partner_account_id = self.utils.get_aws_secret(
-            secret_arn=ssm_key_partner_org_account_id,
+        self.partner_account_id = self.utils.get_ssm_parameter(
+            parameter_name=ssm_key_partner_org_account_id,
             region_name=region_name
         )        
-        self.partner_api_key = self.utils.get_aws_secret(
-            secret_arn=ssm_key_partner_api_key,
+        self.partner_api_key = self.utils.get_ssm_parameter(
+            parameter_name=ssm_key_partner_api_key,
             region_name=self.region_name
         )
 
@@ -40,10 +40,24 @@ class Archera:
     # __get_headers: Returns the headers for the Archera REST APIs. Returns dict with the headers.
     def __get_headers(self, api_key: str) -> dict:
 
+        self.logger.debug('Archera API Key: ' + api_key)
+
         import base64
+
+        # Convert string to bytes
+        bytes_str = api_key.encode('utf-8')
+
+        # Encode to Base64
+        base64_str = base64.b64encode(bytes_str)
+
+        # Convert bytes back to string for readability
+        base64_str = base64_str.decode('utf-8')
+
+        self.logger.debug("Base64 encoded string: " + base64_str)
+
         return {
             'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + base64.b64encode(bytes(api_key, 'utf-8')).decode('utf-8')
+            'Authorization': 'Basic ' + base64_str
         }
     
     # __create_child_account: Creates a new Account under the Archera Partner account using REST APIs. Returns str with the new Account ID.
@@ -128,15 +142,15 @@ class Archera:
         self.logger.debug('HTTP Headers: ' + str(httpHeaders))
 
         customer_account_id = None
-        cfnresponse_data = {}
+        http_response_data = {}
 
         self.logger.info('Starting Archera Onboarding')
         customer_account_id = self.__create_child_account(httpHeaders=httpHeaders, partner_account_id=self.partner_account_id, child_account_name=customer_account_name)
-        cfnresponse_data.update({'ArcheraChildAccountId': customer_account_id})
+        http_response_data.update({'ArcheraChildAccountId': customer_account_id})
 
         self.logger.debug('Initiating onboarding for Customer Archera Account ID: ' + customer_account_id)
         onboarding_id = self.__init_child_account_onboarding(httpHeaders=httpHeaders, child_account_id=customer_account_id)
-        cfnresponse_data.update({'ArcheraOnboardingId': customer_account_id})
+        http_response_data.update({'ArcheraOnboardingId': customer_account_id})
 
         if customer_account_id and onboarding_id:
 
@@ -160,14 +174,14 @@ class Archera:
 
                 if cfn_template_pre_signed_url:                
                     self.logger.info('Archera API Account creation for ' + customer_account_id + ' was successful')
-                    cfnresponse_data.update({'ArcheraAccountCreationStatus': 'Success'})
-                    cfnresponse_data.update({'ArcheraCloudFormationTemplateUrl': cfn_template_pre_signed_url})
+                    http_response_data.update({'ArcheraAccountCreationStatus': 'SUCCESS'})
+                    http_response_data.update({'ArcheraCloudFormationTemplateUrl': cfn_template_pre_signed_url})
                     self.logger.info('Finished Archera Account Creation')
-                    return True, cfnresponse_data
+                    return True, http_response_data
                 else:
                     self.logger.error('Archera API Account creation process for ' + customer_account_id + ' was not successful')
-                    cfnresponse_data.update({'ArcheraAccountCreationStatus': 'Needs Investigation'})
-                    return False, cfnresponse_data
+                    http_response_data.update({'ArcheraAccountCreationStatus': 'NEEDS_INVESTIGATION'})
+                    return False, http_response_data
             else:
                 self.logger.error("Archera's API Account creation failed. Please refer to CloudWatch Logs for a detailed error message.")
-                return False, cfnresponse_data
+                return False, http_response_data
