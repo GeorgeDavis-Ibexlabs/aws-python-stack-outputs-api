@@ -51,7 +51,7 @@ def lambda_handler(event, context) -> dict:
             logger.debug('Create Account Integration through CloudFormation Event - ' + str(event))
 
             archera_onboarding_status, http_response_data = archera.create_account(
-                customer_account_name=customer_account_name + 'c/o Ibexlabs'
+                customer_account_name=customer_account_name + ' c/o Ibexlabs'
             ) # Archera needs `c/o Ibexlabs` suffix at the Partner portal level
 
             logger.debug('Archera Onboarding Status - ' + str(archera_onboarding_status))
