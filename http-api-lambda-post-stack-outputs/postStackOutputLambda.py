@@ -11,12 +11,17 @@ from slack_block_generator.slack_block_generator import SlackBlockGenerator
 logger = logging.getLogger(__name__)
 logger.setLevel(environ.get('LOG_LEVEL') if 'LOG_LEVEL' in environ.keys() else 'INFO')
 
+from utils.utils import Utils
+utilsObj = Utils(logger=logger)
+
 config_handler = ConfigHandler(logger=logger)
 config = config_handler.get_combined_config()
 logger.debug("Final combined config - " + str(config))
 
-if bool(environ.get("JIRA_ENABLED")):
-    jira = JiraHandler(logger=logger, config=config)
+region_name = environ.get("REGION")
+
+if bool(environ.get("ENABLE_JIRA_INTEGRATION")):
+    jira = JiraHandler(logger=logger, region_name=region_name, config=config)
 
 def lambda_handler(event, context):
 
@@ -41,10 +46,13 @@ def lambda_handler(event, context):
             }
         })
 
-        if bool(environ.get("ENABLE_SLACK_INTEGRATION")):
+        if bool(environ.get('ENABLE_SLACK_INTEGRATION')):
 
             # Access environment variables
-            slack_webhook_url = environ.get('SLACK_WEBHOOK_URL')
+            slack_webhook_url = utilsObj.get_aws_secret(
+                secret_arn=environ.get('SLACK_WEBHOOK_URL'),
+                region_name=region_name
+            )
             slack_channel = environ.get('SLACK_CHANNEL')
             slack_username = environ.get('SLACK_USERNAME')
             slack_icon_url = environ.get('SLACK_ICON_URL')
@@ -67,7 +75,7 @@ def lambda_handler(event, context):
                 }
             })
 
-        if bool(environ.get("JIRA_ENABLED")):
+        if bool(environ.get("ENABLE_JIRA_INTEGRATION")):
 
             logger.debug("JSON Body - " + str(http_body))
 
