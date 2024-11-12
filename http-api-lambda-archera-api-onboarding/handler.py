@@ -1,6 +1,5 @@
 from os import environ
 import logging
-import cfnresponse
 import traceback
 import boto3
 
@@ -31,8 +30,9 @@ archera = Archera(
     region_name=region_name
 )
 
-# lambda_handler: This script executes as a Custom Resource on the Onboarding CloudFormation stack, dynamically deploying CloudFormation stack from Ibexlabs partners. The script is executed when the stack is created, updated and removed.
-def lambda_handler(event, context):
+# lambda_handler: This script executes as part of an API to create Archera Accounts using Archera's API. The script is executed when the stack is created, updated and removed.
+# Returns the dynamic Archera CloudFormation template in the HTTP API response
+def lambda_handler(event, context) -> dict:
     
     logger.debug('Event - ' + str(event))
     logger.debug('Context - ' + str(context))
@@ -44,45 +44,62 @@ def lambda_handler(event, context):
     customer_account_name = http_body['CUSTOMER_ACCOUNT_NAME']
     request_type = http_body['REQUEST_TYPE']
 
-    # Create Stack - The following section gets executed when the deployed stack is created or updated using AWS CloudFormation.
+    # Get Create Account CloudFormation Template - The following section gets executed when the REQUEST_TYPE is set to CREATE
     if request_type.upper() == 'CREATE':
 
         try:
-            logger.debug('Create Stack Event - ' + str(event))
+            logger.debug('Create Account Integration through CloudFormation Event - ' + str(event))
 
-            archera_onboarding_status, cfnresponse_data = archera.create_account(
+            archera_onboarding_status, http_response_data = archera.create_account(
                 customer_account_name=customer_account_name + 'c/o Ibexlabs'
             ) # Archera needs `c/o Ibexlabs` suffix at the Partner portal level
 
+            logger.debug('Archera Onboarding Status - ' + str(archera_onboarding_status))
+            logger.debug('HTTP Response Data - ' + str(http_response_data))
             if archera_onboarding_status:
-                cfnresponse.send(event, context, cfnresponse.SUCCESS, cfnresponse_data)
+                # Respond to HTTP request with http_response_data
+                http_response_data.update({
+                    'ArcheraRequestType': 'CREATE',
+                })
+                return http_response_data
             else:
-                raise Exception('Create Stack Error: Archera Onboarding failed')
+                raise Exception('Create Account Error: Archera Onboarding failed')
 
-        # Handling `cfnresponse` error response when the stack creation failed and there is an exception in calling the API. 
+        # Handling error response when the account creation failed and there is an exception in calling the API.
         except Exception as e:
-            logger.exception('Create Stack Error - ' + str(traceback.print_tb(e.__traceback__)))
-            cfnresponse.send(event, context, cfnresponse.FAILED, {})
+            logger.exception('Create Account Error - ' + str(traceback.print_tb(e.__traceback__)))
+            # Respond to HTTP request with failure message
+            return {
+                'ArcheraRequestType': 'CREATE',
+                'ArcheraAccountCreationStatus': 'ACCOUNT_CREATION_FAILED'
+            }
 
-    # Update Stack - The following section gets executed when the deployed parent stack is updated using AWS CloudFormation. It tries to find the child stack and trigger an update.
+    # Update Account CloudFormation Template - The following section gets executed when the REQUEST_TYPE is set to UPDATE
     if request_type.upper() == 'UPDATE':
 
         try:
-            logger.debug('Update Stack Event - ' + str(event))
+            logger.debug('Update Account Integration through CloudFormation Event - ' + str(event))
 
             # TODO: Require an implementation to fetch a list of existing Archera Account IDs
             # archera_update_stack_status = archera.update_stack(account_id=None)
 
             # if archera_update_stack_status:
-            #     # TODO: Send cfnresponse data
-            #     cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+            #   # TODO: Send HTTP Response Data
+            #   pass
             # else:
             #     raise Exception('Update Stack Error: Archera Update failed')
         
-            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+            # Respond to HTTP request with some data
+            return {
+                'ArcheraRequestType': 'UPDATE',
+                'ArcheraAccountCreationStatus': 'NOT_IMPLEMENTED'
+            }
 
-        # Handling `cfnresponse` error response when the stack update failed and there is an exception in calling the API. 
+        # Handling error response when the account update cloudformation API failed and there is an exception in calling the API.
         except Exception as e:
-            logger.exception('Update Stack Error - ' + str(traceback.print_tb(e.__traceback__)))
-            # TODO: Send cfnresponse data
-            cfnresponse.send(event, context, cfnresponse.FAILED, {})
+            logger.exception('Update Account Error - ' + str(traceback.print_tb(e.__traceback__)))
+            # Respond to HTTP request with failure message
+            return {
+                'ArcheraRequestType': 'UPDATE',
+                'ArcheraAccountCreationStatus': 'NOT_IMPLEMENTED'
+            }
