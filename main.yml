@@ -179,7 +179,7 @@ Resources:
       PropagateTags: true
       Domain:
         DomainName: api.ibexlabs.com
-        CertificateArn: arn:aws:acm:us-east-1:651188399649:certificate/359223e5-f67f-4a16-bb4f-7e975d940900
+        CertificateArn: arn:aws:acm:us-east-1:651188399649:certificate/baece8d6-692c-44a3-b43e-bee9bf60fa7a
         EndpointConfiguration: REGIONAL
         Route53:
           HostedZoneId: Z1QA27E6ZDCKYK
