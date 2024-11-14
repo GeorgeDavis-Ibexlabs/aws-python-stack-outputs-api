@@ -164,12 +164,12 @@ Resources:
     DeletionPolicy: RetainExceptOnCreate
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: /aws/http-api/aws-python-stack-outputs-api
+      LogGroupName: !Sub '/aws/http-api/aws-python-stack-outputs-api-${AWS::StackName}'
 
   ServerlessHttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      Name: aws-python-stack-outputs-api
+      Name: !Sub 'aws-python-stack-outputs-api-${AWS::StackName}'
       StageName: $default
       AccessLogSettings:
         DestinationArn: !GetAtt ServerlessHttpApiLogGroup.Arn
