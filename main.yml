@@ -313,82 +313,82 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
 
-  # ServerlessHttpApiProdPostStackOutputServerlessFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     Architectures:
-  #       - x86_64
-  #     Events:
-  #       ApiEvent:
-  #         Type: HttpApi
-  #         Properties:
-  #           Path: /prod/send
-  #           Method: POST
-  #           ApiId: !Ref ServerlessHttpApi
-  #           PayloadFormatVersion: '2.0'
-  #           TimeoutInMillis: 30000
-  #     Runtime: python3.10
-  #     Handler: postStackOutputLambda.lambda_handler
-  #     CodeUri:
-  #       Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-  #       Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaPostStackOutputsApiKey}'
-  #     Environment:
-  #       Variables:
-  #         REGION: !Ref AWS::Region
-  #         GITHUB_BRANCH: main
-  #         ENABLE_SLACK_INTEGRATION: !Ref EnableSlackIntegration
-  #         SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
-  #         SLACK_CHANNEL: !Ref SlackChannelName
-  #         SLACK_USERNAME: !Ref SlackUsername
-  #         SLACK_ICON_URL: !Ref SlackIconUrl
-  #         ENABLE_JIRA_INTEGRATION: !Ref EnableJiraIntegration
-  #         JIRA_CLOUD_URL: !Ref JiraCloudUrl
-  #         JIRA_PROJECT_KEY: !Ref JiraProjectKey
-  #         JIRA_AUTH_EMAIL: !Ref JiraAuthEmail
-  #         JIRA_API_TOKEN: !Ref JiraApiToken
-  #         LOG_LEVEL: DEBUG
-  #     PackageType: Zip
-  #     MemorySize: 128
-  #     Timeout: 30
-  #     PropagateTags: true
-  #     Role: !GetAtt ServerlessHttpApiPostStackOutputLambdaRole.Arn
+  ServerlessHttpApiProdPostStackOutputServerlessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /prod/send
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: '2.0'
+            TimeoutInMillis: 30000
+      Runtime: python3.10
+      Handler: postStackOutputLambda.lambda_handler
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaPostStackOutputsApiKey}'
+      Environment:
+        Variables:
+          REGION: !Ref AWS::Region
+          GITHUB_BRANCH: main
+          ENABLE_SLACK_INTEGRATION: !Ref EnableSlackIntegration
+          SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
+          SLACK_CHANNEL: !Ref SlackChannelName
+          SLACK_USERNAME: !Ref SlackUsername
+          SLACK_ICON_URL: !Ref SlackIconUrl
+          ENABLE_JIRA_INTEGRATION: !Ref EnableJiraIntegration
+          JIRA_CLOUD_URL: !Ref JiraCloudUrl
+          JIRA_PROJECT_KEY: !Ref JiraProjectKey
+          JIRA_AUTH_EMAIL: !Ref JiraAuthEmail
+          JIRA_API_TOKEN: !Ref JiraApiToken
+          LOG_LEVEL: DEBUG
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostStackOutputLambdaRole.Arn
 
-  # ServerlessHttpApiPostArcheraApiProdOnboardingServerlessFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     Architectures:
-  #       - x86_64
-  #     Events:
-  #       ApiEvent:
-  #         Type: HttpApi
-  #         Properties:
-  #           Path: /prod/archera-onboarding
-  #           Method: POST
-  #           ApiId: !Ref ServerlessHttpApi
-  #           PayloadFormatVersion: '2.0'
-  #           TimeoutInMillis: 30000
-  #     Runtime: python3.10
-  #     Handler: handler.lambda_handler
-  #     CodeUri:
-  #       Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-  #       Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaArcheraApiOnboardingKey}'
-  #     Environment:
-  #       Variables:
-  #         STACK_ID: !Ref AWS::StackId
-  #         REGION: !Ref AWS::Region
-  #         AWS_ACCOUNT_ID: !Ref AWS::AccountId
-  #         BOTOCORE_LOGLEVEL: DEBUG
-  #         LOGLEVEL: DEBUG
-  #         ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
-  #         SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterProdArcheraPartnerAccountId
-  #         SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterProdArcheraPartnerApiKey
-  #         TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-  #         TEMPLATE_KEY_PREFIX: 'wafr-ftr-onboarding/archera-deployments/'
-  #     PackageType: Zip
-  #     MemorySize: 128
-  #     Timeout: 30
-  #     PropagateTags: true
-  #     Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
+  ServerlessHttpApiPostArcheraApiProdOnboardingServerlessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /prod/archera-onboarding
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: '2.0'
+            TimeoutInMillis: 30000
+      Runtime: python3.10
+      Handler: handler.lambda_handler
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaArcheraApiOnboardingKey}'
+      Environment:
+        Variables:
+          STACK_ID: !Ref AWS::StackId
+          REGION: !Ref AWS::Region
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          BOTOCORE_LOGLEVEL: DEBUG
+          LOGLEVEL: DEBUG
+          ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
+          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterProdArcheraPartnerAccountId
+          SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterProdArcheraPartnerApiKey
+          TEMPLATE_BUCKET_NAME: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+          TEMPLATE_KEY_PREFIX: 'wafr-ftr-onboarding/archera-deployments/'
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
 
   ServerlessHttpApiTestPostStackOutputServerlessFunction:
     Type: AWS::Serverless::Function
