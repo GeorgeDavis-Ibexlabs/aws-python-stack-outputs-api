@@ -57,6 +57,7 @@ Parameters:
     Description: This is the Slack webhook URL.
     Default: ''
     Type: String
+    NoEcho: true
 
   SlackChannelName:
     Description: This is the Slack channel name.
@@ -100,6 +101,7 @@ Parameters:
     Description: This is the JIRA API token.
     Default: ''
     Type: String
+    NoEcho: true
 
 Resources:
   # This section contains the list of SSM Parameters
@@ -175,6 +177,15 @@ Resources:
       DefaultRouteSettings:
         DetailedMetricsEnabled: false
       PropagateTags: true
+      Domain:
+        DomainName: api.ibexlabs.com
+        CertificateArn: arn:aws:acm:us-east-1:651188399649:certificate/359223e5-f67f-4a16-bb4f-7e975d940900
+        EndpointConfiguration: REGIONAL
+        Route53:
+          HostedZoneId: Z1QA27E6ZDCKYK
+        BasePath:
+          - /
+        SecurityPolicy: TLS_1_2
 
   ServerlessHttpApiPostStackOutputLambdaRole:
     Type: AWS::IAM::Role
