@@ -82,25 +82,25 @@ jobs:
           done
 
       - name: Setup Cloud Formation Linter
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: scottbrenner/cfn-lint-action@v2.4.5
 
       - name: Run Cloud Formation Linter
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cfn-lint --version
           cfn-lint -t ./main.yml
 
       # Runs cfn_nag recursively using the runner's shell
       - name: Stelligent cfn_nag
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: stelligent/cfn_nag@v0.8.10
         with:
           input_path: main.yml
           extra_args: --fail-on-warnings -o json
 
       - name: Configure AWS Credentials Action for GitHub Actions
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-wafr-ftr-onboarding-role
@@ -108,31 +108,31 @@ jobs:
 
       # Upload CloudFormation files to Amazon S3
       - name:  Upload CloudFormation files to Amazon S3
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to us-east-1
       - name: Upload CloudFormation files to us-east-1
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           aws s3 sync . s3://us-east-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to us-east-2
       - name: Upload CloudFormation files to us-east-2
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           aws s3 sync . s3://us-east-2.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to us-west-1
       - name: Upload CloudFormation files to us-west-1
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           aws s3 sync . s3://us-west-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
       # Upload CloudFormation files to ca-central-1
       - name: Upload CloudFormation files to ca-central-1
-        if: steps.changed-cfn-files.outputs.any_changed == 'true'
+        if: steps.changed-cfn-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           aws s3 sync . s3://ca-central-1.${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include 'main.yml' --include 'LICENSE' --include 'README.md'
 
@@ -173,19 +173,19 @@ jobs:
           done
 
       - name: Install Python requirements
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd ${{ env.LAMBDA_DIR_PATH }}/
           pip3 install -r requirements.txt -t .
 
       - name: Package Lambda
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd ${{ env.LAMBDA_DIR_PATH }}/
           zip -r ../${{ env.LAMBDA_ZIP_NAME }} .
 
       - name: Upload Lambda Package Zip
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4.4.0
         with:
           name: ${{ env.LAMBDA_ZIP_NAME }}
@@ -193,7 +193,7 @@ jobs:
           retention-days: 30
 
       - name: Configure AWS Credentials Action for GitHub Actions
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-wafr-ftr-onboarding-role
@@ -201,13 +201,13 @@ jobs:
 
       # Upload lambda zip to Amazon S3
       - name: Upload lambda zip to Amazon S3
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include ${{ env.LAMBDA_ZIP_NAME }}
 
       # Copy lambda zip across region to us-east-1
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
@@ -219,7 +219,7 @@ jobs:
 
       # Copy lambda zip across region to us-east-2
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
@@ -231,7 +231,7 @@ jobs:
 
       # Copy lambda zip across region to us-west-1
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
@@ -243,7 +243,7 @@ jobs:
 
       # Copy lambda zip across region to ca-central-1
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
@@ -290,19 +290,19 @@ jobs:
           done
 
       - name: Install Python requirements
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd ${{ env.LAMBDA_DIR_PATH }}/
           pip3 install -r requirements.txt -t .
 
       - name: Package Lambda
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cd ${{ env.LAMBDA_DIR_PATH }}/
           zip -r ../${{ env.LAMBDA_ZIP_NAME }} .
 
       - name: Upload Lambda Package Zip
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4.4.0
         with:
           name: ${{ env.LAMBDA_ZIP_NAME }}
@@ -310,7 +310,7 @@ jobs:
           retention-days: 30
 
       - name: Configure AWS Credentials Action for GitHub Actions
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-wafr-ftr-onboarding-role
@@ -318,13 +318,13 @@ jobs:
 
       # Upload lambda zip to Amazon S3
       - name: Upload lambda zip to Amazon S3
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           aws s3 sync . s3://${{ vars.BUCKET_BASE_URL }}/${{ vars.S3_KEY_PREFIX }}${{ env.GIT_BRANCH_NAME }}/ --exclude '*' --include ${{ env.LAMBDA_ZIP_NAME }}
 
       # Copy lambda zip across region to us-east-1
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
@@ -336,7 +336,7 @@ jobs:
 
       # Copy lambda zip across region to us-east-2
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
@@ -348,7 +348,7 @@ jobs:
 
       # Copy lambda zip across region to us-west-1
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
@@ -360,7 +360,7 @@ jobs:
 
       # Copy lambda zip across region to ca-central-1
       - name: Copy files across S3 buckets, primarily AWS Lambda zip files
-        if: steps.changed-lambda-files.outputs.any_changed == 'true'
+        if: steps.changed-lambda-files.outputs.any_changed == 'true' || github.event_name == 'workflow_dispatch'
         uses: GeorgeDavis-Ibexlabs/aws-lambda-s3-copy-zips@v0.0.5
         with:
           SRC_REGION: ${{ vars.AWS_REGION }}
