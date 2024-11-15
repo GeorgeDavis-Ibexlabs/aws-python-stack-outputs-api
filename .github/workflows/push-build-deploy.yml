@@ -80,6 +80,7 @@ jobs:
           for file in ${ALL_CHANGED_FILES}; do
             echo "$file was changed"
           done
+          echo ${{github.event_name}}
 
       - name: Setup Cloud Formation Linter
         if: steps.changed-cfn-files.outputs.any_changed == 'true'
