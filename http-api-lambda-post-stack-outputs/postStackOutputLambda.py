@@ -49,8 +49,8 @@ def lambda_handler(event, context):
         if bool(environ.get('ENABLE_SLACK_INTEGRATION')):
 
             # Access environment variables
-            slack_webhook_url = utilsObj.get_aws_secret(
-                secret_arn=environ.get('SLACK_WEBHOOK_URL'),
+            slack_webhook_url = utilsObj.get_ssm_parameter(
+                parameter_name=environ.get('SLACK_WEBHOOK_URL'),
                 region_name=region_name
             )
             slack_channel = environ.get('SLACK_CHANNEL')

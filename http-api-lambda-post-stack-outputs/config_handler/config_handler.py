@@ -36,8 +36,8 @@ class ConfigHandler():
         self.jira_cloud_url = self.jira_project_key = self.jira_auth_email = ''
 
         utilsObj = Utils(logger=logger)
-        self.jira_api_token = utilsObj.get_aws_secret(
-            secret_arn=environ.get("JIRA_API_TOKEN"),
+        self.jira_api_token = utilsObj.get_ssm_parameter(
+            parameter_name=environ.get("JIRA_API_TOKEN"),
             region_name=region_name
         )
         self.jira_default_issue_labels = []
