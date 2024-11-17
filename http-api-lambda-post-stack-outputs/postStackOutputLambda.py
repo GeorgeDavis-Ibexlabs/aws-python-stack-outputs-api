@@ -14,14 +14,14 @@ logger.setLevel(environ.get('LOG_LEVEL') if 'LOG_LEVEL' in environ.keys() else '
 from utils.utils import Utils
 utilsObj = Utils(logger=logger)
 
-config_handler = ConfigHandler(logger=logger)
+region_name = environ.get("REGION")
+
+config_handler = ConfigHandler(logger=logger, region_name=region_name)
 config = config_handler.get_combined_config()
 logger.debug("Final combined config - " + str(config))
 
-region_name = environ.get("REGION")
-
 if bool(environ.get("ENABLE_JIRA_INTEGRATION")):
-    jira = JiraHandler(logger=logger, region_name=region_name, config=config)
+    jira = JiraHandler(logger=logger, config=config)
 
 def lambda_handler(event, context):
 
