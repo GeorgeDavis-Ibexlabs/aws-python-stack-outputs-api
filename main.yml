@@ -59,9 +59,14 @@ Parameters:
     Type: String
     NoEcho: true
 
-  SlackChannelName:
-    Description: This is the Slack channel name.
-    Default: ''
+  SlackProdChannelName:
+    Description: This is the Slack channel name for a PROD environment.
+    Default: 'ibexlabs-onboarding'
+    Type: String
+
+  SlackTestChannelName:
+    Description: This is the Slack channel name for a TEST environment.
+    Default: 'testing-notifications'
     Type: String
 
   SlackUsername:
@@ -338,7 +343,7 @@ Resources:
           GITHUB_BRANCH: main
           ENABLE_SLACK_INTEGRATION: !Ref EnableSlackIntegration
           SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
-          SLACK_CHANNEL: !Ref SlackChannelName
+          SLACK_CHANNEL: !Ref SlackProdChannelName
           SLACK_USERNAME: !Ref SlackUsername
           SLACK_ICON_URL: !Ref SlackIconUrl
           ENABLE_JIRA_INTEGRATION: !Ref EnableJiraIntegration
@@ -415,7 +420,7 @@ Resources:
           GITHUB_BRANCH: !Ref TestStageGitHubBranch
           ENABLE_SLACK_INTEGRATION: !Ref EnableSlackIntegration
           SLACK_WEBHOOK_URL: !Ref SlackWebhookUrl
-          SLACK_CHANNEL: !Ref SlackChannelName
+          SLACK_CHANNEL: !Ref SlackTestChannelName
           SLACK_USERNAME: !Ref SlackUsername
           SLACK_ICON_URL: !Ref SlackIconUrl
           ENABLE_JIRA_INTEGRATION: !Ref EnableJiraIntegration
@@ -512,7 +517,8 @@ Metadata:
         Parameters:
           - EnableSlackIntegration
           - SlackWebhookUrl
-          - SlackChannelName
+          - SlackProdChannelName
+          - SlackTestChannelName
           - SlackUsername
           - SlackIconUrl
 
