@@ -124,7 +124,8 @@ class ConfigHandler():
                         if environ['GITHUB_ACTIONS']:
                             list_item = 'INPUT_' + list_item
 
-                    self.logger.debug('Config `' + str(list_item) + '` within parent `' + str(parent_item) + '` - ' + str(environ[list_item.replace('.', '_').upper()]))
+                    self.logger.debug('Config `' + str(list_item) + '` within parent `' + str(parent_item))
+                    self.logger.debug('Config value - ' + str(environ[list_item.replace('.', '_').upper()]))
 
                     item_path = list_item.split('.')
                     for item in reversed(item_path):
