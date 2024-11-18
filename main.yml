@@ -164,6 +164,104 @@ Resources:
       Type: String
       Value: !Ref TestArcheraPartnerApiKey
 
+  GetLatestGitHubCommitShaLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+  GetLatestGitHubCommitShaLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.10
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt GetLatestGitHubCommitShaLambdaRole.Arn
+      Handler: index.lambda_handler
+      Code:
+        ZipFile: |
+          from os import environ
+          import urllib3
+          import cfnresponse
+          import logging
+          import traceback
+
+          # Setting up the logging level from the environment variable `LOG_LEVEL`.
+          logging.basicConfig()
+          logger = logging.getLogger(__name__)
+          logger.setLevel(environ['LOG_LEVEL'] if 'LOG_LEVEL' in environ.keys() else 'INFO')
+
+          def __github_repos_base_url() -> str:
+
+            return 'https://api.github.com/repos/'
+
+          def __get_latest_commit_sha(http, github_repo_owner: str, github_repo: str, github_repo_branch: str) -> str:
+
+            github_response = http.request('GET', __github_repos_base_url() + github_repo_owner + '/' + github_repo + '/commits/' + github_repo_branch)
+            logger.debug('GitHub Response: ' + str(github_response))
+            return github_response['sha']
+
+          def lambda_handler(event, context):
+            try:
+              http = urllib3.PoolManager()
+
+              github_repo_owner = environ['GITHUB_REPO_OWNER']
+              logger.info('GitHub Repository Owner: ' + github_repo_owner)
+
+              github_repo = environ['GITHUB_REPO']
+              logger.info('GitHub Repository: ' + github_repo)
+
+              properties = event['ResourceProperties']
+              github_repo_branch = properties.get('GITHUB_REPO_BRANCH')
+              logger.info('GitHub Repository Branch: ' + github_repo_branch)
+
+              github_sha = __get_latest_commit_sha(http, github_repo_owner, github_repo, github_repo_branch)
+              logger.info('GitHub Latest Commit SHA: ' + github_sha)
+
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                  'GITHUB_SHA': github_sha
+              })
+            except Exception as e:
+              logger.exception('GitHub API Error' + str(traceback.print_tb(e.__traceback__)))
+              cfnresponse.send(event, context, cfnresponse.FAILED, {})
+      Environment:
+        Variables:
+          GITHUB_REPO_OWNER: GeorgeDavis-Ibexlabs
+          GITHUB_REPO: aws-python-stack-outputs-api
+          LOGLEVEL: DEBUG
+          BOTOCORE_LOGLEVEL: DEBUG
+
+  GetLatestGitHubCommitShaProdLambdaCustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt GetLatestGitHubCommitShaLambda.Arn
+      RoleName: !Ref GetLatestGitHubCommitShaLambdaRole
+      GitHubRepoBranch: main
+
+  GetLatestGitHubCommitShaTestLambdaCustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt GetLatestGitHubCommitShaLambda.Arn
+      RoleName: !Ref GetLatestGitHubCommitShaLambdaRole
+      GitHubRepoBranch: !Ref TestStageGitHubBranch
+
   ServerlessHttpApiLogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: RetainExceptOnCreate
@@ -336,7 +434,7 @@ Resources:
       Handler: postStackOutputLambda.lambda_handler
       CodeUri:
         Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaPostStackOutputsApiKey}'
+        Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaProdLambdaCustomResource.GITHUB_SHA}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
           REGION: !Ref AWS::Region
@@ -376,7 +474,7 @@ Resources:
       Handler: handler.lambda_handler
       CodeUri:
         Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaArcheraApiOnboardingKey}'
+        Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaProdLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiOnboardingKey}'
       Environment:
         Variables:
           STACK_ID: !Ref AWS::StackId
@@ -413,7 +511,7 @@ Resources:
       Handler: postStackOutputLambda.lambda_handler
       CodeUri:
         Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        Key: !Sub 'aws-python-stack-outputs-api/${TestStageGitHubBranch}/${S3LambdaPostStackOutputsApiKey}'
+        Key: !Sub 'aws-python-stack-outputs-api/${TestStageGitHubBranch}/${GetLatestGitHubCommitShaTestLambdaCustomResource.GITHUB_SHA}/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
           REGION: !Ref AWS::Region
@@ -453,7 +551,7 @@ Resources:
       Handler: handler.lambda_handler
       CodeUri:
         Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        Key: !Sub 'aws-python-stack-outputs-api/${TestStageGitHubBranch}/${S3LambdaArcheraApiOnboardingKey}'
+        Key: !Sub 'aws-python-stack-outputs-api/${TestStageGitHubBranch}/${GetLatestGitHubCommitShaTestLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiOnboardingKey}'
       Environment:
         Variables:
           STACK_ID: !Ref AWS::StackId
