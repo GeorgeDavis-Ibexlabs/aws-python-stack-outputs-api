@@ -202,6 +202,7 @@ Resources:
           import cfnresponse
           import logging
           import traceback
+          import json
 
           # Setting up the logging level from the environment variable `LOG_LEVEL`.
           logging.basicConfig()
@@ -216,7 +217,7 @@ Resources:
 
             github_response = http.request('GET', __github_repos_base_url() + github_repo_owner + '/' + github_repo + '/commits/' + github_repo_branch)
             logger.debug('GitHub Response: ' + str(github_response))
-            return github_response['sha']
+            return json.loads(github_response.data)['sha']
 
           def lambda_handler(event, context):
             try:
