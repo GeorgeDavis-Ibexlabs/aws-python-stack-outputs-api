@@ -187,7 +187,7 @@ Resources:
                   - logs:PutLogEvents
                 Resource: !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*"
 
-  GetLatestGitHubCommitShaProdLambda:
+  GetLatestGitHubCommitShaLambda:
     Type: AWS::Lambda::Function
     Properties:
       Runtime: python3.10
@@ -251,14 +251,14 @@ Resources:
   GetLatestGitHubCommitShaProdLambdaCustomResource:
     Type: AWS::CloudFormation::CustomResource
     Properties:
-      ServiceToken: !GetAtt GetLatestGitHubCommitShaProdLambda.Arn
+      ServiceToken: !GetAtt GetLatestGitHubCommitShaLambda.Arn
       RoleName: !Ref GetLatestGitHubCommitShaLambdaRole
       GitHubRepoBranch: main
 
   GetLatestGitHubCommitShaTestLambdaCustomResource:
     Type: AWS::CloudFormation::CustomResource
     Properties:
-      ServiceToken: !GetAtt GetLatestGitHubCommitShaTestLambda.Arn
+      ServiceToken: !GetAtt GetLatestGitHubCommitShaLambda.Arn
       RoleName: !Ref GetLatestGitHubCommitShaLambdaRole
       GitHubRepoBranch: !Ref TestStageGitHubBranch
 
