@@ -437,7 +437,8 @@ Resources:
       Handler: postStackOutputLambda.lambda_handler
       CodeUri:
         Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaProdLambdaCustomResource.GITHUB_SHA}/${S3LambdaPostStackOutputsApiKey}'
+        # Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaProdLambdaCustomResource.GITHUB_SHA}/${S3LambdaPostStackOutputsApiKey}'
+        Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaPostStackOutputsApiKey}'
       Environment:
         Variables:
           REGION: !Ref AWS::Region
@@ -477,7 +478,8 @@ Resources:
       Handler: handler.lambda_handler
       CodeUri:
         Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaProdLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiOnboardingKey}'
+        # Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaProdLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiOnboardingKey}'
+        Key: !Sub 'aws-python-stack-outputs-api/main/${S3LambdaArcheraApiOnboardingKey}'
       Environment:
         Variables:
           STACK_ID: !Ref AWS::StackId
