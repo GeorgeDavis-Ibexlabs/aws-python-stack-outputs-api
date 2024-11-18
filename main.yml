@@ -228,8 +228,10 @@ Resources:
               github_repo = environ['GITHUB_REPO']
               logger.info('GitHub Repository: ' + github_repo)
 
+              logger.debug('Event - ' + str(event))
               properties = event['ResourceProperties']
-              github_repo_branch = properties.get('GITHUB_REPO_BRANCH')
+
+              github_repo_branch = properties.get('GitHubRepoBranch')
               logger.info('GitHub Repository Branch: ' + github_repo_branch)
 
               github_sha = __get_latest_commit_sha(http, github_repo_owner, github_repo, github_repo_branch)
