@@ -36,8 +36,8 @@ class ConfigHandler():
         self.jira_cloud_url = self.jira_project_key = self.jira_auth_email = ''
 
         utilsObj = Utils(logger=logger)
-        self.jira_api_token = utilsObj.get_aws_secret(
-            secret_arn=environ.get("JIRA_API_TOKEN"),
+        self.jira_api_token = utilsObj.get_ssm_parameter(
+            parameter_name=environ.get("JIRA_API_TOKEN"),
             region_name=region_name
         )
         self.jira_default_issue_labels = []
@@ -124,7 +124,8 @@ class ConfigHandler():
                         if environ['GITHUB_ACTIONS']:
                             list_item = 'INPUT_' + list_item
 
-                    self.logger.debug('Config `' + str(list_item) + '` within parent `' + str(parent_item) + '` - ' + str(environ[list_item.replace('.', '_').upper()]))
+                    self.logger.debug('Config `' + str(list_item) + '` within parent `' + str(parent_item))
+                    self.logger.debug('Config value - ' + str(environ[list_item.replace('.', '_').upper()]))
 
                     item_path = list_item.split('.')
                     for item in reversed(item_path):

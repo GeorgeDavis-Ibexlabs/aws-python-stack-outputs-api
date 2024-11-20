@@ -51,7 +51,7 @@ class Utils:
 
     # get_ssm_parameter: Gets the value from Ibexlabs AWS SSM Parameter Store. Returns str with the parameter value.
     def get_ssm_parameter(self, parameter_name: str, region_name: str) -> str:
-
+        
         # Create a SSM client
         ssm_client = client(
             service_name='ssm',
