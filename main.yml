@@ -543,40 +543,40 @@ Resources:
       PropagateTags: true
       Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
 
-  ServerlessHttpApiPostArcheraApiProdVerifyServerlessFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Architectures:
-        - x86_64
-      Events:
-        ApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /prod/verify-archera
-            Method: POST
-            ApiId: !Ref ServerlessHttpApi
-            PayloadFormatVersion: '2.0'
-            TimeoutInMillis: 30000
-      Runtime: python3.10
-      Handler: handler.lambda_handler
-      CodeUri:
-        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
-        Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaTestLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiVerifyOnboardingKey}'
-      Environment:
-        Variables:
-          STACK_ID: !Ref AWS::StackId
-          REGION: !Ref AWS::Region
-          AWS_ACCOUNT_ID: !Ref AWS::AccountId
-          BOTOCORE_LOGLEVEL: DEBUG
-          LOGLEVEL: DEBUG
-          ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
-          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterTestArcheraPartnerAccountId
-          SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterTestArcheraPartnerApiKey
-      PackageType: Zip
-      MemorySize: 128
-      Timeout: 30
-      PropagateTags: true
-      Role: !GetAtt ServerlessHttpApiPostArcheraApiVerifyOnboardingLambdaRole.Arn
+  # ServerlessHttpApiPostArcheraApiProdVerifyServerlessFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     Architectures:
+  #       - x86_64
+  #     Events:
+  #       ApiEvent:
+  #         Type: HttpApi
+  #         Properties:
+  #           Path: /prod/verify-archera
+  #           Method: POST
+  #           ApiId: !Ref ServerlessHttpApi
+  #           PayloadFormatVersion: '2.0'
+  #           TimeoutInMillis: 30000
+  #     Runtime: python3.10
+  #     Handler: handler.lambda_handler
+  #     CodeUri:
+  #       Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+  #       Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaTestLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiVerifyOnboardingKey}'
+  #     Environment:
+  #       Variables:
+  #         STACK_ID: !Ref AWS::StackId
+  #         REGION: !Ref AWS::Region
+  #         AWS_ACCOUNT_ID: !Ref AWS::AccountId
+  #         BOTOCORE_LOGLEVEL: DEBUG
+  #         LOGLEVEL: DEBUG
+  #         ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
+  #         SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterTestArcheraPartnerAccountId
+  #         SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterTestArcheraPartnerApiKey
+  #     PackageType: Zip
+  #     MemorySize: 128
+  #     Timeout: 30
+  #     PropagateTags: true
+  #     Role: !GetAtt ServerlessHttpApiPostArcheraApiVerifyOnboardingLambdaRole.Arn
 
   ServerlessHttpApiTestPostStackOutputServerlessFunction:
     Type: AWS::Serverless::Function
