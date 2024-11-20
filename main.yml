@@ -211,7 +211,7 @@ Resources:
 
   ServerlessHttpApiLogGroup:
     Type: AWS::Logs::LogGroup
-    DeletionPolicy: RetainExceptOnCreate
+    DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
       LogGroupName: !Sub '/aws/http-api/aws-python-stack-outputs-api-${AWS::StackName}'
