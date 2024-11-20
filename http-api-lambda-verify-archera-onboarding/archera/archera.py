@@ -69,7 +69,7 @@ class Archera:
             self.logger.debug('Verify Onboarding Request Body: ' + str(httpBody))
             r = self.http.request(
                 'POST', self.__get_base_url(account_id=child_account_id) + '/partners/onboarding/aws/verify',
-                headers=self.__get_headers(),
+                headers=self.__get_headers(api_key=self.partner_api_key),
                 body=json.dumps(httpBody)
             )
             response = json.loads(r.data)
