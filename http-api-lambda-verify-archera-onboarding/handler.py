@@ -20,8 +20,6 @@ if 'BOTOCORE_LOGLEVEL' in environ.keys():
 # Access environment variables
 base_url = environ.get('ARCHERA_BASE_URL')
 region_name = environ.get('REGION')
-customer_account_name_suffix = environ.get('CUSTOMER_ACCOUNT_NAME_SUFFIX')
-environment = environ.get('ENVIRONMENT')
 
 from archera.archera import Archera
 archera = Archera(
@@ -41,65 +39,31 @@ def lambda_handler(event, context) -> dict:
     # Parse HTTP Request Body for request parameters
     import json
     http_body = json.loads(event['body'])
-    customer_account_name = http_body['CUSTOMER_ACCOUNT_NAME']
-    request_type = http_body['REQUEST_TYPE']
+    
+    child_account_id = http_body['child_account_id']
+    onboarding_id = http_body['onboarding_id']
+    account_id = http_body['account_id']
 
-    # Get Create Account CloudFormation Template - The following section gets executed when the REQUEST_TYPE is set to CREATE
-    if request_type.upper() == 'CREATE':
+    try:
+        logger.debug('Verify Archera Account Integration through Ibexlabs API')
+        logger.debug('Event - ' + str(event))
 
-        try:
-            logger.debug('Create Account Integration through CloudFormation Event - ' + str(event))
+        archera_onboarding_status = archera.verify_onboarding_success(
+            child_account_id=child_account_id,
+            onboarding_id=onboarding_id,
+            customer_aws_account_id=account_id
+        )
 
-            archera_onboarding_status, http_response_data = archera.create_account(
-                customer_account_name=customer_account_name + ' c/o Ibexlabs'
-            ) # Archera needs `c/o Ibexlabs` suffix at the Partner portal level
+        logger.debug('Archera Onboarding Status - ' + str(archera_onboarding_status))        
+        if archera_onboarding_status:
+            return archera_onboarding_status
+        else:
+            raise Exception('Verify Archera Account Error: Archera Onboarding failed')
 
-            logger.debug('Archera Onboarding Status - ' + str(archera_onboarding_status))
-            logger.debug('HTTP Response Data - ' + str(http_response_data))
-            if archera_onboarding_status:
-                # Respond to HTTP request with http_response_data
-                http_response_data.update({
-                    'ArcheraRequestType': 'CREATE',
-                })
-                return http_response_data
-            else:
-                raise Exception('Create Account Error: Archera Onboarding failed')
-
-        # Handling error response when the account creation failed and there is an exception in calling the API.
-        except Exception as e:
-            logger.exception('Create Account Error - ' + str(traceback.print_tb(e.__traceback__)))
-            # Respond to HTTP request with failure message
-            return {
-                'ArcheraRequestType': 'CREATE',
-                'ArcheraAccountCreationStatus': 'ACCOUNT_CREATION_FAILED'
-            }
-
-    # Update Account CloudFormation Template - The following section gets executed when the REQUEST_TYPE is set to UPDATE
-    if request_type.upper() == 'UPDATE':
-
-        try:
-            logger.debug('Update Account Integration through CloudFormation Event - ' + str(event))
-
-            # TODO: Require an implementation to fetch a list of existing Archera Account IDs
-            # archera_update_stack_status = archera.update_stack(account_id=None)
-
-            # if archera_update_stack_status:
-            #   # TODO: Send HTTP Response Data
-            #   pass
-            # else:
-            #     raise Exception('Update Stack Error: Archera Update failed')
-        
-            # Respond to HTTP request with some data
-            return {
-                'ArcheraRequestType': 'UPDATE',
-                'ArcheraAccountCreationStatus': 'NOT_IMPLEMENTED'
-            }
-
-        # Handling error response when the account update cloudformation API failed and there is an exception in calling the API.
-        except Exception as e:
-            logger.exception('Update Account Error - ' + str(traceback.print_tb(e.__traceback__)))
-            # Respond to HTTP request with failure message
-            return {
-                'ArcheraRequestType': 'UPDATE',
-                'ArcheraAccountCreationStatus': 'NOT_IMPLEMENTED'
-            }
+    # Handling error response when the account creation failed and there is an exception in calling the API.
+    except Exception as e:
+        logger.exception('Verify Archera Account Error - ' + str(traceback.print_tb(e.__traceback__)))
+        # Respond to HTTP request with failure message
+        return {
+            'ArcheraAccountCreationStatus': 'ACCOUNT_CREATION_UNVERIFIED'
+        }

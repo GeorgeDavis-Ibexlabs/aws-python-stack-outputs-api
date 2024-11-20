@@ -59,128 +59,30 @@ class Archera:
             'Authorization': 'Basic ' + base64_str
         }
     
-    # __create_child_account: Creates a new Account under the Archera Partner account using REST APIs. Returns str with the new Account ID.
-    def __create_child_account(self, httpHeaders: dict, partner_account_id: str, child_account_name: str) -> str:
-        '''
-            The HTTP Body can contain the following information
-                - company (string, required): Name of the child account
-                - labra_subscription_id (string, optional): Labra subscription ID
-                - email (string, optional): Email associated with the child account
-        '''
+    # verify_onboarding_success: Verifies that the Archera Onboarding process was a success. Returns bool.
+    def verify_onboarding_success(self, child_account_id: str, onboarding_id: str, customer_aws_account_id: str) -> bool:
         httpBody = {
-            'company': child_account_name
+            'onboarding_id': onboarding_id,
+            'account_id': customer_aws_account_id
         }
         try:
-            self.logger.debug('Archera URL: ' + self.__get_base_url(account_id=partner_account_id) + '/partners/onboarding/register_child')
+            self.logger.debug('Verify Onboarding Request Body: ' + str(httpBody))
             r = self.http.request(
-                'POST', self.__get_base_url(account_id=partner_account_id) + '/partners/onboarding/register_child',
-                headers=httpHeaders,
+                'POST', self.__get_base_url(account_id=child_account_id) + '/partners/onboarding/aws/verify',
+                headers=self.__get_headers(),
                 body=json.dumps(httpBody)
             )
             response = json.loads(r.data)
-            self.logger.debug('Create Child Account Response: ' + str(response))
+            self.logger.debug('Verify Onboarding Response: ' + str(response))
             if r.status == 200:
-                return response['org_id']
+                return True
             else:
                 self.logger.exception(response)
                 if len(response.keys()) == 1:
-                    raise Exception('Unable to initiate Archera Onboarding for child Account ' + str(list(response.keys())[0]).capitalize() + ': ' + str(response[list(response.keys())[0]]).capitalize() + '.')
+                    raise Exception('Unknown HTTP error occurred while verifying Archera Onboarding process. ' + str(list(response.keys())[0]).capitalize() + ': ' + str(response[list(response.keys())[0]]).capitalize() + '.')
                 elif 'code' in response.keys():
-                    raise Exception('Unable to create new Archera Account Error ' + str(response['code']) + ': ' + response['status'] + '.')
+                    raise Exception('Unknown HTTP error occurred while verifying Archera Onboarding process. Error ' + str(response['code']) + ': ' + response['status'] + '.')
                 else:
-                    raise Exception('Unable to create new Archera Account Error: ' + str(response) + '.')
+                    raise Exception('Unknown HTTP error occurred while verifying Archera Onboarding process. Error: ' + str(response) + '.')
         except Exception:
             raise
-
-    # __init_child_account_onboarding: Creates a new Account under the Archera Partner account using REST APIs. Returns str with the new Account ID.
-    def __init_child_account_onboarding(self, httpHeaders: dict, child_account_id: str) -> str:
-        try:
-            r = self.http.request(
-                'POST', self.__get_base_url(account_id=child_account_id) + '/partners/onboarding/start',
-                headers=httpHeaders
-            )
-            response = json.loads(r.data)
-            self.logger.debug('Init Child Account Onboarding Response: ' + str(response))
-            if r.status == 200:
-                return response['onboarding_id']
-            else:
-                self.logger.exception(response)
-                if len(response.keys()) == 1:
-                    raise Exception('Unable to initiate Archera Onboarding for child Account ' + str(list(response.keys())[0]).capitalize() + ': ' + str(response[list(response.keys())[0]]).capitalize() + '.')
-                elif 'code' in response.keys():
-                    raise Exception('Unable to initiate Archera Onboarding for child Account Error ' + str(response['code']) + ': ' + response['status'] + '.')
-                else:
-                    raise Exception('Unable to initiate Archera Onboarding for child Account Error: ' + str(response) + '.')
-        except Exception:
-            raise
-
-    # __get_account_cloudformation_template: Downloads the Archera Account-specific Onboarding template to local filesystem. Returns str.
-    def __get_account_cloudformation_template(self, httpHeaders: dict, child_account_id: str) -> str:
-        try:
-            r = self.http.request(
-                'GET', self.__get_base_url(account_id=child_account_id) + '/partners/onboarding/aws/cloudformation_template',
-                headers=httpHeaders
-            )
-            response = json.loads(r.data)
-            self.logger.debug('Get Account CloudFormation Template Response: ' + str(response))
-            if r.status != 200:
-                self.logger.exception(response)
-                if len(response.keys()) == 1:
-                    raise Exception('Unable to download CloudFormation template for child Account ' + str(list(response.keys())[0]).capitalize() + ': ' + str(response[list(response.keys())[0]]).capitalize() + '.')
-                elif 'code' in response.keys():
-                    raise Exception('Unable to download CloudFormation template for child Account Error ' + str(response['code']) + ': ' + response['status'] + '.')
-                else:
-                    raise Exception('Unable to download CloudFormation template for child Account Error: ' + str(response) + '.')
-        except Exception:
-            raise
-
-        return json.dumps(response['template'])
-        
-    def create_account(self, customer_account_name: str) -> tuple[bool, dict]:        
-        httpHeaders = self.__get_headers(api_key=self.partner_api_key)
-        self.logger.debug('HTTP Headers: ' + str(httpHeaders))
-
-        customer_account_id = None
-        http_response_data = {}
-
-        self.logger.info('Starting Archera Onboarding')
-        customer_account_id = self.__create_child_account(httpHeaders=httpHeaders, partner_account_id=self.partner_account_id, child_account_name=customer_account_name)
-        http_response_data.update({'ArcheraChildAccountId': customer_account_id})
-
-        self.logger.debug('Initiating onboarding for Customer Archera Account ID: ' + customer_account_id)
-        onboarding_id = self.__init_child_account_onboarding(httpHeaders=httpHeaders, child_account_id=customer_account_id)
-        http_response_data.update({'ArcheraOnboardingId': customer_account_id})
-
-        if customer_account_id and onboarding_id:
-
-            self.logger.debug('Downloading the Archera Account-specific Onboarding template to runtime')
-            cfn_template_response = self.__get_account_cloudformation_template(httpHeaders=httpHeaders, child_account_id=customer_account_id)
-
-            if cfn_template_response:
-
-                # Setup S3
-                s3Copy = s3CopyFiles(
-                    logger=self.logger,
-                    region_name=self.region_name
-                )
-
-                cfn_template_pre_signed_url = s3Copy.s3_put_object(
-                    dst_bucket=environ.get('TEMPLATE_BUCKET_NAME'),  
-                    dst_key_prefix=environ.get('TEMPLATE_KEY_PREFIX'),      
-                    dst_key=customer_account_id,
-                    data=cfn_template_response
-                )
-
-                if cfn_template_pre_signed_url:                
-                    self.logger.info('Archera API Account creation for ' + customer_account_id + ' was successful')
-                    http_response_data.update({'ArcheraAccountCreationStatus': 'SUCCESS'})
-                    http_response_data.update({'ArcheraCloudFormationTemplateUrl': cfn_template_pre_signed_url})
-                    self.logger.info('Finished Archera Account Creation')
-                    return True, http_response_data
-                else:
-                    self.logger.error('Archera API Account creation process for ' + customer_account_id + ' was not successful')
-                    http_response_data.update({'ArcheraAccountCreationStatus': 'NEEDS_INVESTIGATION'})
-                    return False, http_response_data
-            else:
-                self.logger.error("Archera's API Account creation failed. Please refer to CloudWatch Logs for a detailed error message.")
-                return False, http_response_data
