@@ -531,8 +531,8 @@ Resources:
           BOTOCORE_LOGLEVEL: DEBUG
           LOGLEVEL: DEBUG
           ARCHERA_BASE_URL: "https://api.archera.ai/v2"
-          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterTestArcheraPartnerAccountId
-          SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterTestArcheraPartnerApiKey
+          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterProdArcheraPartnerAccountId
+          SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterProdArcheraPartnerApiKey
       PackageType: Zip
       MemorySize: 128
       Timeout: 30
