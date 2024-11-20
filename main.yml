@@ -19,6 +19,11 @@ Parameters:
     Default: 'http-api-lambda-archera-api-onboarding.zip'
     Type: String
 
+  S3LambdaArcheraApiVerifyOnboardingKey:
+    Description: S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.
+    Default: 'http-api-lambda-verify-archera-onboarding.zip'
+    Type: String
+
   ProdArcheraPartnerAccountId:
     Description: This is the Archera Partner Account ID for the Production Archera Account.
     MinLength: 24
@@ -419,6 +424,46 @@ Resources:
                 Resource:
                   - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
 
+  ServerlessHttpApiPostArcheraApiVerifyOnboardingLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: AllowLogging
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:*'
+        - PolicyName: AllowSSMAndSecretsManager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:PROD_ARCHERA_PARTNER_API_KEY'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_ACCOUNT_ID'
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter:TEST_ARCHERA_PARTNER_API_KEY'
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*'
+
   ServerlessHttpApiProdPostStackOutputServerlessFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -469,7 +514,7 @@ Resources:
         ApiEvent:
           Type: HttpApi
           Properties:
-            Path: /prod/archera-onboarding
+            Path: /prod/onboard-archera
             Method: POST
             ApiId: !Ref ServerlessHttpApi
             PayloadFormatVersion: '2.0'
@@ -497,6 +542,41 @@ Resources:
       Timeout: 30
       PropagateTags: true
       Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
+
+  ServerlessHttpApiPostArcheraApiProdVerifyServerlessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /prod/verify-archera
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: '2.0'
+            TimeoutInMillis: 30000
+      Runtime: python3.10
+      Handler: handler.lambda_handler
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub 'aws-python-stack-outputs-api/main/${GetLatestGitHubCommitShaTestLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiVerifyOnboardingKey}'
+      Environment:
+        Variables:
+          STACK_ID: !Ref AWS::StackId
+          REGION: !Ref AWS::Region
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          BOTOCORE_LOGLEVEL: DEBUG
+          LOGLEVEL: DEBUG
+          ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
+          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterTestArcheraPartnerAccountId
+          SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterTestArcheraPartnerApiKey
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostArcheraApiVerifyOnboardingLambdaRole.Arn
 
   ServerlessHttpApiTestPostStackOutputServerlessFunction:
     Type: AWS::Serverless::Function
@@ -547,7 +627,7 @@ Resources:
         ApiEvent:
           Type: HttpApi
           Properties:
-            Path: /test/archera-onboarding
+            Path: /test/onboard-archera
             Method: POST
             ApiId: !Ref ServerlessHttpApi
             PayloadFormatVersion: '2.0'
@@ -574,6 +654,41 @@ Resources:
       Timeout: 30
       PropagateTags: true
       Role: !GetAtt ServerlessHttpApiPostArcheraApiOnboardingLambdaRole.Arn
+
+  ServerlessHttpApiPostArcheraApiTestVerifyServerlessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Architectures:
+        - x86_64
+      Events:
+        ApiEvent:
+          Type: HttpApi
+          Properties:
+            Path: /test/verify-archera
+            Method: POST
+            ApiId: !Ref ServerlessHttpApi
+            PayloadFormatVersion: '2.0'
+            TimeoutInMillis: 30000
+      Runtime: python3.10
+      Handler: handler.lambda_handler
+      CodeUri:
+        Bucket: !FindInMap [RegionMap, !Ref 'AWS::Region', S3BucketName]
+        Key: !Sub 'aws-python-stack-outputs-api/${TestStageGitHubBranch}/${GetLatestGitHubCommitShaTestLambdaCustomResource.GITHUB_SHA}/${S3LambdaArcheraApiVerifyOnboardingKey}'
+      Environment:
+        Variables:
+          STACK_ID: !Ref AWS::StackId
+          REGION: !Ref AWS::Region
+          AWS_ACCOUNT_ID: !Ref AWS::AccountId
+          BOTOCORE_LOGLEVEL: DEBUG
+          LOGLEVEL: DEBUG
+          ARCHERA_BASE_URL: 'https://api.archera.ai/v2'
+          SSM_KEY_ARCHERA_PARTNER_ORG_ID: !Ref SSMParameterTestArcheraPartnerAccountId
+          SSM_KEY_ARCHERA_PARTNER_API_KEY: !Ref SSMParameterTestArcheraPartnerApiKey
+      PackageType: Zip
+      MemorySize: 128
+      Timeout: 30
+      PropagateTags: true
+      Role: !GetAtt ServerlessHttpApiPostArcheraApiVerifyOnboardingLambdaRole.Arn
 
 Outputs:
   ServerlessHttpApiId:
@@ -614,6 +729,7 @@ Metadata:
         Parameters:
           - S3LambdaPostStackOutputsApiKey
           - S3LambdaArcheraApiOnboardingKey
+          - S3LambdaArcheraApiVerifyOnboardingKey
 
       - Label:
           default: Slack Integration configuration.
@@ -655,3 +771,6 @@ Metadata:
 
       S3LambdaArcheraApiOnboardingKey:
         default: 'Please provide the S3 Object key for the Dynamic CloudFormation Templates Lambda function code zip file.'
+
+      S3LambdaArcheraApiVerifyOnboardingKey:
+        default: 'Please provide the S3 Object key for the Post Archera Verify Onboarding Lambda function code zip file.'
